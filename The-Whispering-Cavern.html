@@ -1,0 +1,2614 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>耳語地穴：傳奇試煉 (傳奇與裝備拓展版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght=400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .glass-panel { background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .log-window { scrollbar-width: thin; scrollbar-color: #475569 #1e293b; }
+        .log-window::-webkit-scrollbar { width: 8px; }
+        .log-window::-webkit-scrollbar-thumb { background-color: #475569; border-radius: 10px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .shake { animation: shake 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="min-h-screen p-2 sm:p-4 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-800 via-gray-900 to-black">
+
+    <div id="game-container" class="max-w-4xl w-full glass-panel rounded-2xl shadow-2xl p-4 sm:p-6 space-y-6 flex flex-col h-[95vh] sm:h-auto">
+        
+        <!-- 頂部資訊區 -->
+        <div id="header" class="border-b border-gray-700 pb-4 shrink-0">
+            <h1 class="text-2xl sm:text-3xl font-black text-amber-500 mb-4 tracking-wider text-center drop-shadow-md">⚔️ 耳語地穴：傳奇試煉</h1>
+            
+            <!-- 玩家狀態 -->
+            <div id="stats-panel" class="flex flex-col sm:flex-row justify-between items-center text-sm bg-gray-900/80 border border-gray-700 p-3 sm:p-4 rounded-xl hidden shadow-inner gap-4 transition-all">
+                <div class="flex flex-wrap gap-3 sm:gap-6 w-full justify-center sm:justify-start items-center">
+                    <div class="text-rose-400 font-bold text-base sm:text-lg bg-gray-800 px-3 py-1 rounded-lg">❤️ HP: <span id="hp-val">0</span>/<span id="max-hp-val">0</span></div>
+                    <div class="text-sky-400 font-bold text-base sm:text-lg bg-gray-800 px-3 py-1 rounded-lg">🛡️ AC: <span id="ac-val">0</span></div>
+                    <div class="text-amber-400 font-bold text-base sm:text-lg bg-gray-800 px-3 py-1 rounded-lg">📜 職業: <span id="class-val">-</span></div>
+                    <div class="text-emerald-400 font-bold text-base sm:text-lg bg-gray-800 px-3 py-1 rounded-lg cursor-pointer hover:bg-gray-700 select-none transition border border-emerald-500/30" onclick="window.usePotionOutsideCombat()" title="點擊在非戰鬥中飲用恢復20點生命">🧪 藥水: <span id="potion-val">0</span></div>
+                </div>
+                <div id="equipped-gear-display" class="text-xs sm:text-sm text-indigo-300 w-full sm:w-auto text-center border-t sm:border-t-0 sm:border-l border-gray-700 pt-2 sm:pt-0 sm:pl-4 font-mono"></div>
+            </div>
+            
+            <!-- 敵人狀態 -->
+            <div id="enemy-stats-panel" class="mt-4 flex flex-col sm:flex-row justify-between items-center bg-rose-950/40 border border-rose-900/50 p-3 rounded-xl hidden shadow-inner animate-fade-in">
+                <div class="text-white font-bold text-lg flex items-center gap-2 mb-2 sm:mb-0">
+                    👹 敵方目標: <span id="enemy-name-val" class="text-rose-300 drop-shadow-sm">-</span>
+                </div>
+                <div class="flex gap-4 bg-black/40 px-4 py-2 rounded-lg border border-rose-900/30">
+                    <div class="text-rose-400 font-bold text-lg">❤️ HP: <span id="enemy-hp-val">0</span></div>
+                    <div class="text-sky-400 font-bold text-lg">🛡️ AC: <span id="enemy-ac-val">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 劇情與選擇區 -->
+        <div id="story-display" class="flex-grow overflow-y-auto text-base sm:text-lg leading-relaxed text-gray-200 animate-fade-in font-medium"></div>
+        <div id="action-panel" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 shrink-0 min-h-[60px]"></div>
+        
+        <!-- 戰鬥日誌區 -->
+        <div id="log-window" class="log-window h-40 sm:h-48 overflow-y-auto bg-black/80 p-4 rounded-xl text-xs sm:text-sm font-mono border border-gray-800 shadow-inner shrink-0">
+            <p class="text-gray-500 italic">> 深淵巨口已開，等待下一位冒險者...</p>
+        </div>
+    </div>
+
+    <script>
+        function playSynthSound(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (!ctx) return;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                if (type === 'hit') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(160, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(10, ctx.currentTime + 0.12);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.12);
+                } else if (type === 'heal') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(280, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(650, ctx.currentTime + 0.25);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.25);
+                } else if (type === 'spell') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(380, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 0.35);
+                    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.35);
+                } else if (type === 'loot') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    osc.frequency.setValueAtTime(554.37, ctx.currentTime + 0.08);
+                    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.16);
+                    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.35);
+                } else if (type === 'gameover') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.6);
+                    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.6);
+                }
+            } catch (e) {
+                // 忽略未與網頁互動時的音效播放錯誤
+            }
+        }
+
+        // 隨機擲骰
+        function roll(d) { return Math.floor(Math.random() * d) + 1; }
+
+        let _combatState = {
+            rageTurns: 0,
+            enemyProneTurns: 0,
+            enemyBlindTurns: 0,
+            enemyStunnedTurns: 0,
+            enemyPoisonedTurns: 0,
+            barbarianReckless: false,
+            stoneskinTurns: 0,
+            barkskinTurns: 0,          
+            enemyIntimidatedTurns: 0, 
+            fatigueTurns: 0,          
+            backstabCooldown: 0,
+            playerStunnedTurns: 0, 
+            bossTurnCounter: 0,    
+            enemyStoneskinTurns: 0,
+            playerFrozenTurns: 0, 
+            playerProneTurns: 0 
+        };
+
+        let gameState = {
+            scene: 'selectClass',
+            player: null,
+            currentEnemy: null,
+            potions: 1, 
+            get combatState() {
+                return _combatState;
+            },
+            set combatState(newVal) {
+                _combatState = new Proxy(newVal, {
+                    set(target, prop, value) {
+                        if (prop === 'enemyProneTurns' && value > 0 && gameState.currentEnemy && gameState.currentEnemy.isElderBrain) {
+                            log(`🧠 主腦深深扎根於黏液池中，【免疫】一切跌倒、掃倒與滑倒效果！`, 'text-sky-400 font-bold');
+                            target[prop] = 0;
+                            return true;
+                        }
+                        target[prop] = value;
+                        return true;
+                    }
+                });
+            },
+            gear: {
+                weapon: null,
+                armor: null,
+                shield: null,
+                amulet: null
+            },
+            pendingNextScene: null,
+            currentLootItem: null, 
+            trapSuccessFourLoot: false, 
+            log: []
+        };
+
+        gameState.combatState = _combatState;
+
+        const gearDB = {
+            shield: { id: 'shield', name: "精鋼盾牌", type: "shield", desc: "防禦值(AC)+4 (戰士、牧師、盜賊、德魯伊專用)", restriction: ["戰士", "牧師", "盜賊", "德魯伊"] },
+            heavy_armor: { id: 'heavy_armor', name: "全身重甲", type: "armor", desc: "AC設定為20，若已有盾牌則為24 (戰士、牧師專用)", restriction: ["戰士", "牧師"] },
+            studded_leather: { id: 'studded_leather', name: "精製鑲釘甲", type: "armor", desc: "AC設定為16，若已有盾牌則為20 (盜賊、牧師、野蠻人、德魯伊專用)", restriction: ["盜賊", "牧師", "野蠻人", "德魯伊"] },
+            longsword_p1: { id: 'longsword_p1', name: "鋒銳長劍+1", type: "weapon", desc: "物理攻擊命中與傷害+1 (戰士、盜賊專用)", restriction: ["戰士", "盜賊"] },
+            greatsword_p1: { id: 'greatsword_p1', name: "巨劍+1", type: "weapon", desc: "物理攻擊命中與傷害+2，無法與盾共用 (戰士、野蠻人專用)", restriction: ["戰士", "野蠻人"], no_shield: true },
+            falchion_p1: { id: 'falchion_p1', name: "彎刃大刀+1", type: "weapon", desc: "物理命中+2，在投骰時 19-20 發生重擊，無法與盾共用 (戰士、野蠻人專用)", restriction: ["戰士", "野蠻人"], no_shield: true },
+            spear_p1: { id: 'spear_p1', name: "長矛+1", type: "weapon", desc: "雙手武器。物理命中+3，傷害+1，無法與盾共用 (戰士、野蠻人、武僧、德魯伊專用)", restriction: ["戰士", "野蠻人", "武僧", "德魯伊"], no_shield: true },
+            staff_p1: { id: 'staff_p1', name: "魔力法杖+1", type: "weapon", desc: "所有職業用：物理攻擊命中與傷害+1，所有控制與傷害法術效果+2 (提升法術豁免DC+2)", restriction: ["戰士", "野蠻人", "盜賊", "牧師", "法師", "術士", "武僧", "德魯伊"] },
+            scimitar_p1: { id: 'scimitar_p1', name: "秘銀彎刀+1", type: "weapon", desc: "命中+1。19-20點重擊（盜賊裝備時為18-20點重擊），單手武器", restriction: ["戰士", "野蠻人", "盜賊", "德魯伊"] },
+            jutte_p1: { id: 'jutte_p1', name: "精金十手+1", type: "weapon", desc: "所有職業用：單手。提升物理命中+1，防禦(AC)+1。提升盜賊背刺倍率至5倍。", restriction: ["戰士", "野蠻人", "盜賊", "武僧", "牧師", "法師", "術士", "德魯伊"] },
+            sling_p1: { id: 'sling_p1', name: "投石索+1", type: "weapon", desc: "傷害+2，物理命中-1，單手武器", restriction: ["盜賊", "牧師", "法師", "術士", "德魯伊"] },
+            caster_amulet: { id: 'caster_amulet', name: "星空護身符", type: "amulet", desc: "所有法術與治療效果+2 (提升所有控制法術DC+2) (法師、牧師、術士、德魯伊專用)", restriction: ["法師", "牧師", "術士", "德魯伊"] },
+            robe: { id: 'robe', name: "祕法戰袍", type: "armor", desc: "防禦值(AC)+3 (法師、術士、野蠻人、武僧、德魯伊專用)", restriction: ["法師", "野蠻人", "術士", "武僧", "德魯伊"] },
+            skin_amulet: { id: 'skin_amulet', name: "皮膚硬化項鍊", type: "amulet", desc: "所有職業用：提升防禦值(AC)+2", restriction: ["戰士", "野蠻人", "盜賊", "武僧", "牧師", "法師", "術士", "德魯伊"] },
+            shortsword_p1: { id: 'shortsword_p1', name: "短劍+1", type: "weapon", desc: "除牧師外所有人用：物理攻擊命中率+1。提升盜賊背刺倍率至6倍。", restriction: ["戰士", "野蠻人", "盜賊", "武僧", "法師", "術士", "德魯伊"] }
+        };
+
+        const classes = {
+            fighter: { 
+                name: '戰士', hp: 30, atkBonus: 8, ac: 16, desc: '近戰大師。擁有全職業最高的物理命中率、強悍防禦與威力戰技。擁有【被動：武器訓練】裝備任意武器時命中與傷害額外+2。', baseDmgDie: 8, baseDmgBonus: 3,
+                abilities: [
+                    { name: '猛力攻擊', id: 'heavy_strike', cost: 'inf', desc: '物理戰技：命中-3，擊中造成 物理普攻+8 點傷害 (可重擊)' },
+                    { name: '威壓打擊', id: 'intimidate', cost: 'inf', desc: '物理戰技：命中雙骰取低，使敵人受「威壓」狀態 2 回合 (對不死/構造體無效)' },
+                    { name: '掃倒', id: 'sweep', cost: 'inf', desc: '物理戰技：命中-5。若裝備盾牌或長杖(法杖)則因重心優勢使命中懲罰減輕至-2。擊中使非飛行/非植物對手跌倒並無法行動 1+1D3 回合且AC-4' }
+                ]
+            },
+            barbarian: {
+                name: '野蠻人', hp: 40, atkBonus: 8, ac: 13, desc: '狂怒化身。持巨斧的高血量狂戰士。擁有【被動：兇蠻武器】手持雙手武器時命中與傷害額外+3。', baseDmgDie: 12, baseDmgBonus: 3,
+                abilities: [
+                    { name: '兇蠻打擊', id: 'brutal_strike', cost: 'inf', desc: '攻擊雙骰取高，但下回合敵人攻擊你也雙骰取高' },
+                    { name: '狂暴', id: 'rage', cost: 3, desc: '不耗回合。持續10回合：命中+2，傷害+2，AC-2' }
+                ]
+            },
+            rogue: { 
+                name: '盜賊', hp: 20, atkBonus: 7, ac: 14, desc: '致命刺客。投出19即重擊，配備拋沙、偷襲技巧，與大跨度優化的遠程毒鏢。裝備劍與十手背刺倍率提升。', baseDmgDie: 6, baseDmgBonus: 2,
+                abilities: [
+                    { name: '背刺', id: 'backstab', cost: 'inf', desc: '物理傷害！手持短劍爆發6倍傷害、十手為5倍、長劍或彎刀為4倍，其他武器為3倍 (背刺可重擊，冷卻 3 回合)' },
+                    { name: '拋沙', id: 'throw_sand', cost: 3, desc: '使敵人陷入目盲狀態 2+1D6 回合，敵方攻擊劣勢，我方攻擊優勢' },
+                    { name: '毒鏢', id: 'poison_dart', cost: 3, desc: '戰術毒素：造成 2D6+1 點毒素傷害 (每日限 3 次)。命中時敵人須通過體質(CON)豁免，否則「中毒」3回合(命中-1與傷害-1)。對不死生物、惡魔等無生命體無效。' },
+                    { name: '偷襲', id: 'sneak_attack', cost: 'inf', desc: '限對目盲敵人施展，造成物理普攻外加 1D6 額外傷害' }
+                ]
+            },
+            monk: {
+                name: '武僧', hp: 26, atkBonus: 7, ac: 16, desc: '身心合一修行者。擁有【被動：功夫大師】若裝備魔力法杖或精金十手，物理命中額外+1，且19-20骰皆能觸發重擊！手持武器還能爆發3連擊！', baseDmgDie: 6, baseDmgBonus: 2,
+                abilities: [
+                    { name: '震懾拳', id: 'stun_strike', cost: 3, desc: '命中-3，若擊中則陷入「震懾」狀態 (5回合，巨型生物有50%機率免疫)，無法行動且受擊時我方優勢' },
+                    { name: '疾風連擊', id: 'flurry', cost: 5, desc: '揮出狂風連擊！若手持武器則爆發三次攻擊 (第三擊為武器普攻，可重擊)' },
+                    { name: '掃倒', id: 'sweep', cost: 'inf', desc: '物理戰技：命中-5。武僧雖無法裝備盾牌，但若裝備長杖(法杖)則命中懲罰減輕至-2。擊中使非飛行/非植物對手跌倒並無法行動 1+1D3 回合且AC-4' }
+                ]
+            },
+            cleric: {
+                name: '牧師', hp: 20, atkBonus: 7, ac: 15, desc: '神聖治療者。擁有神聖打擊（對不死/異怪全額雙倍傷害，可用6次）與全新控場/爆發神術。', baseDmgDie: 6, baseDmgBonus: 2,
+                abilities: [
+                    { name: '治療術', id: 'heal', cost: 4, desc: '恢復自身 15 HP' },
+                    { name: '神聖打擊', id: 'divine_smite', cost: 6, desc: '物理打擊追加 6 點神聖傷害 (對不死與異怪類型怪物的全額總傷害效果直接翻倍！)' },
+                    { name: '人類定身術', id: 'hold_person', cost: 4, desc: '神聖律令：使一名類人生物震懾 5 回合無法行動，對非類人目標無效' },
+                    { name: '陽炎爆', id: 'sunburst', cost: 1, desc: '神術：大範圍造成 6D6 神聖傷害 (不死/異怪受雙倍傷害)，並附加 2+1D6 回合目盲' },
+                    { name: '驅散死靈', id: 'turn_undead', cost: 3, desc: '檢定(擲骰>8成功)，直接消滅不死生物' }
+                ]
+            },
+            druid: {
+                name: '德魯伊', hp: 24, atkBonus: 7, ac: 15, desc: '自然之友。掌控雷電與冰雪秘術，能靈活治療並兼具防護與大範圍控場。', baseDmgDie: 6, baseDmgBonus: 2,
+                abilities: [
+                    { name: '落雷術', id: 'call_lightning', cost: 5, desc: '自然法術：召喚天雷對目標造成 2D6 點閃電傷害 (對飛行、怕電與潮濕目標造成雙倍導電傷害)。每日限 5 次，可受魔力法杖與星空護身符增強。' },
+                    { name: '雪風暴', id: 'blizzard', cost: 3, desc: '自然秘術：造成 3D6 點冰霜傷害，對火焰類/火免/怕冰生物造成雙倍凍結傷害，對冰免生物無效' },
+                    { name: '治療術', id: 'heal', cost: 4, desc: '恢復自身 15 HP' },
+                    { name: '油膩術', id: 'grease', cost: 3, desc: '使非飛行敵人跌倒無法行動 2+1D6 回合且AC-4' },
+                    { name: '樹膚術', id: 'barkskin', cost: 2, desc: '防護秘術：10回合內防禦(AC)提升 4 點，但極易引燃 (受到火焰類怪物傷害時變為 1.5 倍)' },
+                    { name: '石膚術', id: 'stoneskin', cost: 1, desc: '防護奧術：10回合內受到的所有傷害減半 (每日限 1 次)' }
+                ]
+            },
+            wizard: { 
+                name: '法師', hp: 14, atkBonus: 4, ac: 12, desc: '掌控多樣控場與破壞法術，擁有被動護盾與石膚術。', baseDmgDie: 4, baseDmgBonus: 1,
+                abilities: [
+                    { name: '火球術', id: 'fireball', cost: 3, desc: '造成 3D6 點火焰傷害，對植物及怕火生物造成雙倍傷害' },
+                    { name: '力竭波', id: 'fatigue_wave', cost: 2, desc: '奧術法術：暫時使敵人飛行失效(墜落地面受 3D6 / 巨型 5D6 傷害)且命中與傷害 -3 (持續 1D6+2 回合，對不死生物無效)' },
+                    { name: '魔法飛彈', id: 'magic_missile', cost: 6, desc: '射出三發必中飛彈，每發 1D3 傷害' },
+                    { name: '油膩術', id: 'grease', cost: 3, desc: '使敵人跌倒無法行動 2+1D6 回合且AC-4' },
+                    { name: '目盲術', id: 'blind', cost: 3, desc: '使敵人失明 2+1D6 回合，其攻擊判定一律雙骰取低' },
+                    { name: '人類定身術', id: 'hold_person', cost: 4, desc: '奧術律令：使一名類人生物震懾 5 回合無法行動，對非類人目標無效' },
+                    { name: '石膚術', id: 'stoneskin', cost: 2, desc: '10回合內受到的所有傷害減半' },
+                    { name: '護盾術', id: 'shield', cost: 2, desc: '被動反應：若將受傷且護盾可擋下，自動消耗 AC+5' }
+                ]
+            },
+            sorcerer: { 
+                name: '術士', hp: 20, atkBonus: 4, ac: 14, desc: '血脈覺醒者。更高血量與防禦，專精火球、魔法飛彈、油膩術與死亡一指。', baseDmgDie: 4, baseDmgBonus: 1,
+                abilities: [
+                    { name: '強效火球術', id: 'fireball_sorcerer', cost: 6, desc: '造成 4D6 點火焰傷害，對植物及怕火生物造成雙倍傷害' },
+                    { name: '強效魔法飛彈', id: 'magic_missile_sorcerer', cost: 9, desc: '射出四發必中飛彈，每發 1D3 傷害' },
+                    { name: '油膩術', id: 'grease', cost: 3, desc: '使敵人跌倒無法行動 2+1D6 回合且AC-4' },
+                    { name: '力竭波', id: 'fatigue_wave', cost: 2, desc: '奧術法術：暫時使敵人飛行失效(墜落地面受 3D6 / 巨型 5D6 傷害)且命中與傷害 -3 (持續 1D6+2 回合，對不死生物無效)' },
+                    { name: '死亡一指', id: 'finger_of_death', cost: 1, desc: '每日限 1 次。發出死靈之線造成 7D8+10 點毀滅死靈傷害，但對不死生物會造成等量治療！' }
+                ]
+            }
+        };
+
+        function getCritThreshold() {
+            if (!gameState.player) return 20;
+            const pName = gameState.player.name;
+            const wId = gameState.gear.weapon ? gameState.gear.weapon.id : '';
+            
+            if (wId === 'falchion_p1') {
+                return 19;
+            }
+            if (pName === '武僧' && (wId === 'staff_p1' || wId === 'jutte_p1')) {
+                return 19;
+            }
+            if (pName === '盜賊') {
+                if (wId === 'scimitar_p1') return 18;
+                return 19;
+            } else {
+                if (wId === 'scimitar_p1') return 19;
+                return 20;
+            }
+        }
+
+        function log(msg, colorClass = 'text-gray-300') {
+            const logWindow = document.getElementById('log-window');
+            if (!logWindow) return;
+            const entry = document.createElement('div');
+            entry.className = `${colorClass} mb-2 border-b border-gray-800/50 pb-1 leading-relaxed animate-fade-in`;
+            entry.innerHTML = `> ${msg}`;
+            logWindow.appendChild(entry);
+            logWindow.scrollTop = logWindow.scrollHeight;
+        }
+
+        function usePotionOutsideCombat() {
+            if (!gameState.player) return;
+            if (gameState.potions <= 0) {
+                log(`你身上已經沒有治療藥水了！`, 'text-rose-400');
+                return;
+            }
+            if (gameState.player.hp >= gameState.player.maxHp) {
+                log(`你的生命值已是全滿，不需要使用藥水！`, 'text-gray-400');
+                return;
+            }
+            gameState.potions--;
+            gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 20);
+            playSynthSound('heal');
+            log(`🧪 你飲用了一瓶治療藥水，恢復了 20 點生命值！`, 'text-emerald-400 font-bold');
+            updateStats();
+        }
+
+        function updateStats() {
+            if (!gameState.player) return;
+            
+            let baseAc = gameState.player.ac;
+            let finalAtkBonus = gameState.player.atkBonus;
+            let finalDmgBonus = 0;
+            let spellBonus = 0;
+            let gearNames = [];
+
+            const hasShield = !!gameState.gear.shield;
+
+            if (gameState.gear.armor) {
+                if (gameState.gear.armor.id === 'heavy_armor') {
+                    baseAc = hasShield ? 24 : 20;
+                } else if (gameState.gear.armor.id === 'studded_leather') {
+                    baseAc = hasShield ? 20 : 16;
+                } else if (gameState.gear.armor.id === 'robe') {
+                    baseAc += 3;
+                    if (hasShield) baseAc += 4;
+                }
+                gearNames.push(gameState.gear.armor.name);
+            } else {
+                if (hasShield) baseAc += 4;
+            }
+
+            if (hasShield) {
+                gearNames.push(gameState.gear.shield.name);
+            }
+
+            let monkKungFuActive = false;
+
+            if (gameState.gear.weapon) {
+                const w = gameState.gear.weapon;
+                gearNames.push(w.name);
+                if (w.id === 'longsword_p1') { finalAtkBonus += 1; finalDmgBonus += 1; }
+                else if (w.id === 'greatsword_p1') { finalAtkBonus += 2; finalDmgBonus += 2; }
+                else if (w.id === 'falchion_p1') { finalAtkBonus += 2; } 
+                else if (w.id === 'spear_p1') { finalAtkBonus += 3; finalDmgBonus += 1; }
+                else if (w.id === 'staff_p1') { finalAtkBonus += 1; finalDmgBonus += 1; spellBonus += 2; }
+                else if (w.id === 'shortsword_p1') { finalAtkBonus += 1; }
+                else if (w.id === 'scimitar_p1') { finalAtkBonus += 1; } 
+                else if (w.id === 'sling_p1') { finalAtkBonus -= 1; finalDmgBonus += 2; } 
+                else if (w.id === 'jutte_p1') { finalAtkBonus += 1; baseAc += 1; } 
+
+                if (gameState.player.name === '戰士') {
+                    finalAtkBonus += 2;
+                    finalDmgBonus += 2;
+                }
+
+                if (gameState.player.name === '野蠻人' && w.no_shield) {
+                    finalAtkBonus += 3;
+                    finalDmgBonus += 3;
+                }
+
+                if (gameState.player.name === '武僧' && (w.id === 'staff_p1' || w.id === 'jutte_p1')) {
+                    finalAtkBonus += 1;
+                    monkKungFuActive = true;
+                }
+            }
+
+            if (gameState.gear.amulet) {
+                gearNames.push(gameState.gear.amulet.name);
+                if (gameState.gear.amulet.id === 'caster_amulet') {
+                    spellBonus += 2;
+                } else if (gameState.gear.amulet.id === 'skin_amulet') {
+                    baseAc += 2;
+                }
+            }
+
+            if (gameState.combatState && gameState.combatState.rageTurns > 0) {
+                finalAtkBonus += 2;
+                finalDmgBonus += 2;
+                baseAc -= 2;
+            }
+
+            if (gameState.combatState && gameState.combatState.barkskinTurns > 0) {
+                baseAc += 4;
+            }
+
+            if (gameState.combatState && gameState.combatState.playerFrozenTurns > 0) {
+                baseAc -= 2;
+                finalAtkBonus -= 2;
+            }
+
+            if (gameState.combatState && gameState.combatState.playerProneTurns > 0) {
+                baseAc -= 4;
+            }
+
+            gameState.player.currentAC = baseAc;
+            gameState.player.currentAtkBonus = finalAtkBonus;
+            gameState.player.currentDmgBonus = finalDmgBonus;
+            gameState.player.spellBonus = spellBonus;
+
+            const playerHp = Math.max(0, gameState.player.hp);
+            const playerMaxHp = gameState.player.maxHp;
+
+            document.getElementById('stats-panel').classList.remove('hidden');
+            document.getElementById('hp-val').textContent = playerHp;
+            document.getElementById('max-hp-val').textContent = playerMaxHp;
+            document.getElementById('ac-val').textContent = baseAc;
+            document.getElementById('class-val').textContent = gameState.player.name;
+            document.getElementById('potion-val').textContent = gameState.potions;
+
+            let gearText = gearNames.length > 0 ? `裝備: ${gearNames.join(' | ')}` : "裝備: 破舊衣物";
+            if (gameState.player.name === '戰士' && gameState.gear.weapon) {
+                gearText += " | ⚔️ 武器訓練：命中與傷害 +2！";
+            }
+            if (gameState.player.name === '野蠻人' && gameState.gear.weapon && gameState.gear.weapon.no_shield) {
+                gearText += " | 🪓 兇蠻武器：命中與傷害 +3！";
+            }
+            if (monkKungFuActive) {
+                gearText += " | 🥋 功夫大師：命中+1、19-20重擊！";
+            }
+            document.getElementById('equipped-gear-display').textContent = gearText;
+
+            if (gameState.scene.startsWith('combat') && gameState.currentEnemy) {
+                const enemy = gameState.currentEnemy;
+                const enemyHp = Math.max(0, enemy.hp);
+                const enemyMaxHp = enemy.maxHp;
+
+                const pPct = Math.max(0, Math.floor((playerHp / playerMaxHp) * 100));
+                const cardPlayerHp = document.getElementById('card-player-hp');
+                const cardPlayerMaxHp = document.getElementById('card-player-max-hp');
+                const cardPlayerHpPct = document.getElementById('card-player-hp-pct');
+                const cardPlayerHpBar = document.getElementById('card-player-hp-bar');
+                const cardPlayerAc = document.getElementById('card-player-ac');
+                const cardPlayerHit = document.getElementById('card-player-hit-val');
+                const cardPlayerDmg = document.getElementById('card-player-dmg-val');
+
+                if (cardPlayerHp) cardPlayerHp.textContent = playerHp;
+                if (cardPlayerMaxHp) cardPlayerMaxHp.textContent = playerMaxHp;
+                if (cardPlayerHpPct) cardPlayerHpPct.textContent = `${pPct}%`;
+                if (cardPlayerHpBar) cardPlayerHpBar.style.width = `${pPct}%`;
+                if (cardPlayerAc) cardPlayerAc.textContent = baseAc;
+                if (cardPlayerHit) cardPlayerHit.textContent = `+${finalAtkBonus}`;
+                if (cardPlayerDmg) {
+                    const wId = gameState.gear.weapon ? gameState.gear.weapon.id : '';
+                    const critLimit = getCritThreshold();
+                    const bStr = `1D${gameState.player.baseDmgDie}+${gameState.player.baseDmgBonus + finalDmgBonus}`;
+                    let suffix = ` (重擊門檻: ${critLimit}+)`;
+                    if (gameState.player.name === '盜賊') {
+                        if (wId === 'shortsword_p1') suffix += " (背刺 x6)";
+                        else if (wId === 'jutte_p1') suffix += " (背刺 x5)";
+                        else if (wId === 'longsword_p1' || wId === 'scimitar_p1') suffix += " (背刺 x4)";
+                        else suffix += " (背刺 x3)";
+                    }
+                    cardPlayerDmg.textContent = bStr + suffix;
+                }
+
+                const cardPotionBtnCount = document.getElementById('combat-potion-count');
+                if (cardPotionBtnCount) {
+                    cardPotionBtnCount.textContent = `剩餘數量: ${gameState.potions} 瓶 (消耗1回合行動)`;
+                    if (gameState.potions <= 0) {
+                        const btn = cardPotionBtnCount.closest('button');
+                        if (btn) {
+                            btn.disabled = true;
+                            btn.className = 'bg-gray-800/80 p-3 sm:p-4 rounded-xl font-bold text-gray-500 cursor-not-allowed border border-gray-700 flex flex-col justify-center items-center col-span-1 sm:col-span-2';
+                        }
+                    }
+                }
+
+                const cardPlayerBuffs = document.getElementById('card-player-buffs');
+                if (cardPlayerBuffs) {
+                    let playerBuffsHtml = '';
+                    if (gameState.combatState.rageTurns > 0) {
+                        playerBuffsHtml += `<span class="bg-rose-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-pulse">🔥 狂暴 (${gameState.combatState.rageTurns})</span>`;
+                    }
+                    if (gameState.combatState.stoneskinTurns > 0) {
+                        playerBuffsHtml += `<span class="bg-sky-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">🧱 石膚 (${gameState.combatState.stoneskinTurns})</span>`;
+                    }
+                    if (gameState.combatState.barkskinTurns > 0) {
+                        playerBuffsHtml += `<span class="bg-emerald-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-pulse">🌿 樹膚 (${gameState.combatState.barkskinTurns})</span>`;
+                    }
+                    if (gameState.combatState.backstabCooldown > 0) {
+                        playerBuffsHtml += `<span class="bg-fuchsia-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">🔪 背刺 CD (${gameState.combatState.backstabCooldown})</span>`;
+                    }
+                    if (gameState.combatState.playerFrozenTurns > 0) {
+                        playerBuffsHtml += `<span class="bg-cyan-500 text-black text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-pulse">❄️ 凍結 (${gameState.combatState.playerFrozenTurns})</span>`;
+                    }
+                    if (gameState.combatState.playerProneTurns > 0) {
+                        playerBuffsHtml += `<span class="bg-amber-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-bounce">🧼 跌倒 (${gameState.combatState.playerProneTurns})</span>`;
+                    }
+                    if (gameState.player.name === '戰士' && gameState.gear.weapon) {
+                        playerBuffsHtml += `<span class="bg-indigo-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">⚔️ 武器訓練</span>`;
+                    }
+                    if (gameState.player.name === '野蠻人' && gameState.gear.weapon && gameState.gear.weapon.no_shield) {
+                        playerBuffsHtml += `<span class="bg-amber-700 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">🪓 兇蠻武器</span>`;
+                    }
+                    if (monkKungFuActive) {
+                        playerBuffsHtml += `<span class="bg-amber-600 text-black text-[10px] px-1.5 py-0.5 rounded-full font-bold">🥋 功夫大師</span>`;
+                    }
+                    cardPlayerBuffs.innerHTML = playerBuffsHtml || '<span class="text-[10px] text-gray-500">無狀態效果</span>';
+                }
+
+                const ePct = Math.max(0, Math.floor((enemyHp / enemyMaxHp) * 100));
+                const cardEnemyHp = document.getElementById('card-enemy-hp');
+                const cardEnemyMaxHp = document.getElementById('card-enemy-max-hp');
+                const cardEnemyHpPct = document.getElementById('card-enemy-hp-pct');
+                const cardEnemyHpBar = document.getElementById('card-enemy-hp-bar');
+                const cardEnemyAc = document.getElementById('card-enemy-ac');
+
+                if (cardEnemyHp) cardEnemyHp.textContent = enemyHp;
+                if (cardEnemyMaxHp) cardEnemyMaxHp.textContent = enemyMaxHp;
+                if (cardEnemyHpPct) cardEnemyHpPct.textContent = `${ePct}%`;
+                if (cardEnemyHpBar) cardEnemyHpBar.style.width = `${ePct}%`;
+                
+                if (cardEnemyAc) {
+                    let enemyAcDisplay = enemy.ac;
+                    if (gameState.combatState.enemyProneTurns > 0) enemyAcDisplay -= 4;
+                    cardEnemyAc.textContent = enemyAcDisplay;
+                }
+
+                const cardEnemyDebuffs = document.getElementById('card-enemy-debuffs');
+                if (cardEnemyDebuffs) {
+                    let enemyDebuffsHtml = '';
+                    if (gameState.combatState.enemyProneTurns > 0) {
+                        enemyDebuffsHtml += `<span class="bg-amber-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-bounce">🧼 跌倒 (${gameState.combatState.enemyProneTurns})</span>`;
+                    }
+                    if (gameState.combatState.enemyBlindTurns > 0) {
+                        enemyDebuffsHtml += `<span class="bg-yellow-600 text-black text-[10px] px-1.5 py-0.5 rounded-full font-bold">👁️ 目盲 (${gameState.combatState.enemyBlindTurns})</span>`;
+                    }
+                    if (gameState.combatState.enemyStunnedTurns > 0) {
+                        enemyDebuffsHtml += `<span class="bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-pulse">⚡ 震懾 (${gameState.combatState.enemyStunnedTurns})</span>`;
+                    }
+                    if (gameState.combatState.enemyIntimidatedTurns > 0) {
+                        enemyDebuffsHtml += `<span class="bg-orange-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">💢 威壓 (${gameState.combatState.enemyIntimidatedTurns})</span>`;
+                    }
+                    if (gameState.combatState.enemyPoisonedTurns > 0) {
+                        enemyDebuffsHtml += `<span class="bg-emerald-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-pulse">🤢 中毒 (${gameState.combatState.enemyPoisonedTurns})</span>`;
+                    }
+                    if (gameState.combatState.enemyStoneskinTurns > 0) {
+                        enemyDebuffsHtml += `<span class="bg-sky-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">🧱 石膚 (${gameState.combatState.enemyStoneskinTurns})</span>`;
+                    }
+                    if (gameState.combatState.fatigueTurns > 0) {
+                        enemyDebuffsHtml += `<span class="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-pulse">🌀 力竭 (${gameState.combatState.fatigueTurns})</span>`;
+                        if (enemy.isFlying) {
+                            enemyDebuffsHtml += `<span class="bg-stone-600 text-stone-200 text-[10px] px-1.5 py-0.5 rounded-full font-bold">🚫 擊墜 (地)</span>`;
+                        }
+                    }
+                    cardEnemyDebuffs.innerHTML = enemyDebuffsHtml || '<span class="text-[10px] text-gray-500">無狀態效果</span>';
+                }
+
+                const enemyPanel = document.getElementById('enemy-stats-panel');
+                if (enemyPanel) {
+                    enemyPanel.classList.remove('hidden');
+                    document.getElementById('enemy-name-val').textContent = enemy.name;
+                    document.getElementById('enemy-hp-val').textContent = enemyHp;
+                    let enemyAcDisplay = enemy.ac;
+                    if (gameState.combatState.enemyProneTurns > 0) enemyAcDisplay -= 4;
+                    document.getElementById('enemy-ac-val').textContent = enemyAcDisplay;
+                }
+            } else {
+                const enemyPanel = document.getElementById('enemy-stats-panel');
+                if (enemyPanel) enemyPanel.classList.add('hidden');
+            }
+        }
+
+        function usePotionInCombat(nextScene) {
+            if (gameState.potions <= 0) {
+                log(`你身上已經沒有治療藥水了！`, 'text-rose-400');
+                return;
+            }
+            gameState.potions--;
+            gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 20);
+            playSynthSound('heal');
+            log(`🧪 戰況危急！你飲用了一瓶治療藥水，HP 恢復了 20 點！`, 'text-emerald-400 font-bold');
+            
+            updateStats();
+            
+            const actions = document.getElementById('action-panel');
+            actions.innerHTML = '<div class="col-span-1 sm:col-span-2 text-center text-rose-300 py-4 font-bold animate-pulse flex justify-center items-center h-full">⚔️ 雙方交鋒中...</div>';
+            setTimeout(() => {
+                enemyTurn(nextScene);
+            }, 1000);
+        }
+
+        window.skipLootBlessing = () => {
+            playSynthSound('heal');
+            gameState.player.ac += 2;
+            gameState.player.maxHp += 2;
+            gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 2);
+            log(`🎁 [深淵賜福] 深淵感受到你戰勝了貪婪，賜福給與勇氣之人！`, 'text-emerald-400 font-bold text-lg animate-pulse');
+            log(`⚡ 你的防禦值 (AC) 永久提升 2 點！最大生命值 (Max HP) 永久提升 2 點！`, 'text-sky-300 font-bold');
+            updateStats();
+            renderScene('pre_rest_combat');
+        };
+
+        function renderScene(sceneName) {
+            gameState.scene = sceneName;
+            const display = document.getElementById('story-display');
+            const actions = document.getElementById('action-panel');
+            
+            actions.className = 'flex flex-col gap-3 justify-center items-center w-full max-w-md mx-auto shrink-0';
+            actions.innerHTML = '';
+            
+            if (sceneName === 'node_loot_phase') {
+                actions.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 shrink-0 min-h-[60px]';
+                if (!gameState.currentLootItem) {
+                    const keys = Object.keys(gearDB);
+                    const lootCount = gameState.trapSuccessFourLoot ? 4 : 2;
+                    let selectedKeys = [];
+                    while (selectedKeys.length < lootCount) {
+                        const randomKey = keys[Math.floor(Math.random() * keys.length)];
+                        if (!selectedKeys.includes(randomKey)) {
+                            selectedKeys.push(randomKey);
+                        }
+                    }
+                    gameState.currentLootItem = selectedKeys.map(k => ({ ...gearDB[k] }));
+                    gameState.trapSuccessFourLoot = false;
+                }
+
+                display.innerHTML = `
+                    <div class="bg-amber-900/40 border border-amber-600/50 p-6 rounded-xl shadow-lg animate-fade-in">
+                        <h2 class="text-2xl font-bold mb-4 text-amber-400 flex items-center gap-2">🎁 意外的補給！</h2>
+                        <p class="mb-4 text-gray-200">你在怪物的屍骸、古舊寶匣或破解的大型法陣中找到了發光的裝備。你可以帶走其中一件，或者選擇將其兌換成一瓶關鍵的治療藥水：</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4">
+                        ${gameState.currentLootItem.map(item => `
+                            <div class="bg-black/60 border border-amber-500/50 p-4 rounded-lg flex flex-col justify-between">
+                                <div>
+                                    <span class="text-lg font-bold text-amber-300 block mb-1">【${item.name}】</span>
+                                    <p class="text-xs text-gray-300 leading-relaxed">${item.desc}</p>
+                                </div>
+                                <p class="text-[10px] text-emerald-400 mt-2 font-mono border-t border-gray-800 pt-1">限制職業: ${item.restriction.join('、')}</p>
+                            </div>
+                        `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                gameState.currentLootItem.forEach((item) => {
+                    const canEquip = item.restriction.includes(gameState.player.name);
+                    const btnEquip = document.createElement('button');
+                    
+                    if (canEquip) {
+                        btnEquip.className = 'bg-emerald-700/80 hover:bg-emerald-600 p-4 rounded-xl font-bold text-white transition border border-emerald-500 shadow-lg w-full text-center';
+                        btnEquip.innerHTML = `裝備 <span class="text-amber-200">${item.name}</span>`;
+                        btnEquip.onclick = () => {
+                            playSynthSound('loot');
+                            if (item.no_shield && gameState.gear.shield) {
+                                gameState.gear.shield = null;
+                                log(`[系統] 因為裝備了雙手武器，盾牌已被自動卸除！`, 'text-orange-400');
+                            }
+                            if (item.type === 'shield' && gameState.gear.weapon && gameState.gear.weapon.no_shield) {
+                                gameState.gear.weapon = null;
+                                log(`[系統] 因為裝備了盾牌，雙手武器已被自動卸除！`, 'text-orange-400');
+                            }
+                            gameState.gear[item.type] = item;
+                            log(`成功裝備了 【${item.name}】！`, 'text-emerald-400 font-bold');
+                            gameState.currentLootItem = null;
+                            updateStats();
+                            renderScene(gameState.pendingNextScene);
+                        };
+                    } else {
+                        btnEquip.className = 'bg-gray-800/80 p-4 rounded-xl font-bold text-gray-500 cursor-not-allowed border border-gray-700 w-full text-center';
+                        btnEquip.innerHTML = `<div>❌ 無法裝備</div><span class="text-xs font-normal">(${item.name}) 職業不符</span>`;
+                    }
+                    actions.appendChild(btnEquip);
+                });
+
+                const btnGetPotion = document.createElement('button');
+                btnGetPotion.className = 'bg-indigo-700 hover:bg-indigo-600 p-4 rounded-xl font-bold text-white transition border border-indigo-500 shadow-lg w-full text-center';
+                btnGetPotion.innerHTML = `🧪 換取 <span class="text-emerald-300">1 瓶治療藥水</span>`;
+                btnGetPotion.onclick = () => {
+                    playSynthSound('loot');
+                    gameState.potions++;
+                    log(`你放棄了挑選裝備，改為收取了 1 瓶【治療藥水】！`, 'text-emerald-300 font-bold');
+                    gameState.currentLootItem = null;
+                    updateStats();
+                    renderScene(gameState.pendingNextScene);
+                };
+                actions.appendChild(btnGetPotion);
+
+                const btnSkip = document.createElement('button');
+                btnSkip.className = 'bg-gray-700 hover:bg-gray-600 p-4 rounded-xl font-bold text-white transition border border-gray-500 w-full text-center';
+                btnSkip.textContent = '全都不拿取，繼續前進';
+                btnSkip.onclick = () => {
+                    log(`你選擇留下了裝備，繼續向前摸索。`, 'text-gray-400');
+                    gameState.currentLootItem = null;
+                    renderScene(gameState.pendingNextScene);
+                };
+                actions.appendChild(btnSkip);
+                updateStats();
+                return;
+            }
+
+            switch(sceneName) {
+                case 'selectClass':
+                    actions.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 shrink-0';
+                    display.innerHTML = `
+                        <h2 class="text-3xl font-bold mb-4 text-white text-center drop-shadow animate-fade-in">選擇你的角色與天命</h2>
+                        <p class="mb-6 text-gray-300 text-center">進入幽深而陰涼的耳語地穴前，請選擇一個符合你靈魂的職業：</p>
+                    `;
+                    const classOrder = ['fighter', 'barbarian', 'rogue', 'monk', 'cleric', 'druid', 'wizard', 'sorcerer'];
+                    classOrder.forEach(key => {
+                        const c = classes[key];
+                        const btn = document.createElement('button');
+                        btn.className = 'bg-gray-800/60 hover:bg-gray-700/80 p-4 rounded-xl text-left border border-indigo-900/50 hover:border-indigo-500 transition-all shadow-md group w-full';
+                        btn.innerHTML = `
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xl font-bold text-amber-400 group-hover:text-amber-300">${c.name}</span>
+                                <span class="text-xs font-mono text-gray-400">HP:${c.hp} / AC:${c.ac}</span>
+                            </div>
+                            <p class="text-sm text-gray-300 leading-snug">${c.desc}</p>
+                        `;
+                        btn.onclick = () => {
+                            gameState.player = JSON.parse(JSON.stringify(c));
+                            gameState.player.maxHp = c.hp;
+                            playSynthSound('spell');
+                            log(`你選擇了成為一名 ${c.name}。願神明保佑你。`, 'text-sky-300 font-bold');
+                            updateStats();
+                            renderScene('intro');
+                        };
+                        actions.appendChild(btn);
+                    });
+                    break;
+
+                case 'intro':
+                    display.innerHTML = `
+                        <div class="text-center max-w-md mx-auto py-4">
+                            <h2 class="text-2xl font-bold text-white mb-4 animate-fade-in">第一層：陰影入口</h2>
+                            <p class="mb-4">你推開沉重的石門，一股霉味與死亡的氣息撲面而來。牆上的火把閃爍著詭異的幽藍色光芒。</p>
+                            <p class="text-gray-300">前方出現了兩條分岔路，一條長滿發光苔蘚，另一條則佈滿乾涸的血跡。</p>
+                        </div>
+                    `;
+                    addActionButton('進入長滿苔蘚的通道 (遭遇巨蜘蛛、狂暴藤蔓、寒霜蕈怪等)', () => renderScene('corridor_moss'));
+                    addActionButton('進入佈滿血跡的通道 (遭遇獸人暴徒、骷髏戰士、冬狼等)', () => renderScene('corridor_blood'));
+                    break;
+
+                case 'corridor_moss':
+                    const mossEnemies = [
+                        { name: '巨蜘蛛', hp: 20, ac: 13, dmg: 4, type: 'beast', isFlying: false, legs: 8, hitBonus: 0, desc: '一隻巨大的 <span class="text-rose-400 font-bold">巨蜘蛛</span> 從天花板垂降下來，向你噴吐著毒液！' },
+                        { name: '食屍鬼', hp: 25, ac: 12, dmg: 5, type: 'undead', isFlying: false, legs: 2, hitBonus: 1, desc: '一隻散發著惡臭且精於獵殺的 <span class="text-rose-400 font-bold">食屍鬼</span> 從苔蘚堆中爬出，飢渴地盯著你！' },
+                        { name: '狂暴藤蔓', hp: 22, ac: 12, dmg: 4, type: 'plant', isFlying: false, legs: 0, fireWeak: true, hitBonus: 0, desc: '一株表面覆滿倒刺與劇毒汁液的 <span class="text-rose-400 font-bold">狂暴藤蔓 (怕火)</span> 朝你揮舞著粗壯的觸枝！' },
+                        { name: '毒尾蠍', hp: 18, ac: 14, dmg: 5, type: 'beast', isFlying: false, legs: 8, hitBonus: 1, desc: '一隻閃爍著黑綠幽光的 <span class="text-rose-400 font-bold">毒尾蠍 (命中加成)</span> 揮舞著巨螯，高聳著致命毒針！' },
+                        { name: '寒霜蕈怪', hp: 15, ac: 11, dmg: 4, type: 'plant', isFlying: false, legs: 0, fireWeak: true, coldImmune: true, hitBonus: 0, desc: '一團覆滿冰晶的 <span class="text-rose-400 font-bold">寒霜蕈怪 (怕火/冰免)</span> 突然在角落爆裂開來，散發出致命的極寒孢子霧！' }
+                    ];
+                    const randomMossEnemy = mossEnemies[Math.floor(Math.random() * mossEnemies.length)];
+                    display.innerHTML = `
+                        <div class="text-center max-w-md mx-auto py-4">
+                            <h2 class="text-2xl font-bold text-white mb-4 animate-fade-in">遭遇戰：黏稠之穴</h2>
+                            <p class="mb-4">通道裡異常潮濕。${randomMossEnemy.desc}</p>
+                        </div>
+                    `;
+                    addActionButton('拔出武器，準備戰鬥！', () => startCombat(randomMossEnemy, 'post_combat_1'));
+                    break;
+
+                case 'corridor_blood':
+                    const bloodEnemies = [
+                        { name: '獸人暴徒', hp: 30, ac: 11, dmg: 5, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名力大無窮、揮舞著鐵鑄狼牙棒的 <span class="text-rose-400 font-bold">獸人暴徒 (命中加成+2)</span> 發現了你，怒吼著衝了過來！' },
+                        { name: '骷髏戰士', hp: 22, ac: 14, dmg: 6, type: 'undead', isFlying: false, legs: 2, hitBonus: 1, desc: '地上乾涸的血跡中，一具身姿漸進的 <span class="text-rose-400 font-bold">骷髏戰士 (命中加成+1)</span> 舉起生鏽鐵劍，眼窩燃起血光！' },
+                        { name: '地獄雙頭犬', hp: 24, ac: 12, dmg: 5, type: 'fiend', isFlying: false, legs: 4, fireImmune: true, coldWeak: true, hitBonus: 1, desc: '一頭體型龐大、噴吐著硫磺煙霧的 <span class="text-rose-400 font-bold">地獄雙頭犬 (火焰免疫/怕冰/命中加成)</span> 踏著烈焰對你低吼！' },
+                        { name: '地精祭司', hp: 16, ac: 13, dmg: 4, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 0, desc: '一名身穿碎骨長袍的 <span class="text-rose-400 font-bold">地精祭司</span> 尖叫著，揮舞法杖開始引導邪惡射線！' },
+                        { name: '冬狼', hp: 20, ac: 13, dmg: 5, type: 'beast', isFlying: false, legs: 4, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '一隻裝載硬雪外殼的 <span class="text-rose-400 font-bold">冬狼 (怕火/冰免/命中加成)</span> 帶著徹骨寒氣撲面咬來！' }
+                    ];
+                    const randomBloodEnemy = bloodEnemies[Math.floor(Math.random() * bloodEnemies.length)];
+                    display.innerHTML = `
+                        <div class="text-center max-w-md mx-auto py-4">
+                            <h2 class="text-2xl font-bold text-white mb-4 animate-fade-in">遭遇戰：狂暴之血</h2>
+                            <p class="mb-4">你聽到粗重的喘息聲與骨骼摩擦的聲音。${randomBloodEnemy.desc}</p>
+                        </div>
+                    `;
+                    addActionButton('拔出武器，準備戰鬥！', () => startCombat(randomBloodEnemy, 'post_combat_1'));
+                    break;
+
+                case 'post_combat_1':
+                    display.innerHTML = `
+                        <div class="text-center max-w-md mx-auto py-4">
+                            <h2 class="text-2xl font-bold text-white mb-4 animate-fade-in">短暫的喘息</h2>
+                            <p class="mb-4">敵人倒下，化為一灘血水與殘骸。走廊盡頭有兩扇門：</p>
+                            <p class="text-gray-300">左邊的木門虛掩著，透出微光；右邊的鐵門則刻滿了機關與奇異法陣，散發著危險且強烈的祕法氣息。</p>
+                        </div>
+                    `;
+                    addActionButton('進入左邊的木門 (常規掉寶區)', () => {
+                        gameState.trapSuccessFourLoot = false; 
+                        gameState.pendingNextScene = 'corridor_2';
+                        renderScene('node_loot_phase');
+                    });
+                    addActionButton('嘗試破解右邊門鎖的防禦陷阱 (成功獲4選1極優厚寶箱！)', () => {
+                        const isMagicTrap = Math.random() < 0.5;
+                        const rollVal = roll(20);
+                        const playerClass = gameState.player.name;
+
+                        if (isMagicTrap) {
+                            const isArcaneClass = (playerClass === '法師' || playerClass === '術士');
+                            let bonus = gameState.player.spellBonus || 0;
+                            if (isArcaneClass) bonus += 3;
+
+                            log(`[陷阱檢定] 🔮 你在鐵門周圍發現了一個奧法奔流的「能量法陣陷阱」！正在試圖平息法術...`, 'text-indigo-400');
+                            if (isArcaneClass) {
+                                log(`[職業優勢] 你身為具有深厚祕法造詣的 ${playerClass}，在此能量解構中獲得了 +3 額外加值！`, 'text-sky-300');
+                            }
+
+                            const finalTotal = rollVal + bonus;
+                            if (finalTotal >= 10) {
+                                playSynthSound('loot');
+                                log(`[檢定成功] (奧術擲骰 ${rollVal} + 加成 ${bonus} = ${finalTotal} >= 難度 10)。你完美地疏導了狂暴的能量！法陣消散，門後的古代精良寶盒豁然開啟！`, 'text-emerald-400 font-bold');
+                                gameState.trapSuccessFourLoot = true; 
+                                gameState.pendingNextScene = 'corridor_2';
+                                renderScene('node_loot_phase');
+                            } else {
+                                playSynthSound('hit');
+                                const trapDmg = 3;
+                                gameState.player.hp -= trapDmg;
+                                log(`[檢定失敗] (奧術擲骰 ${rollVal} + 加成 ${bonus} = ${finalTotal} < 難度 10)。法陣劇烈逆流！你受到 ${trapDmg} 點閃電元素傷害。然而大門也已被衝擊力強行融斷！`, 'text-rose-400');
+                                updateStats();
+                                if (gameState.player.hp <= 0) {
+                                    renderScene('gameOver');
+                                } else {
+                                    gameState.trapSuccessFourLoot = false;
+                                    gameState.pendingNextScene = 'corridor_2';
+                                    renderScene('node_loot_phase');
+                                }
+                            }
+                        } else {
+                            const isRogueClass = (playerClass === '盜賊');
+                            let bonus = 0;
+                            if (isRogueClass) bonus += 3;
+
+                            log(`[陷阱檢定] ⚙️ 你在觸碰鎖孔時，細微的絞盤聲響起——這是一個致命的「重弩暗箭物理陷阱」！`, 'text-amber-400');
+                            if (isRogueClass) {
+                                log(`[職業優勢] 作為開鎖與機關專家的 ${playerClass}，你的雙手敏捷無雙，獲得了 +3 額外加值！`, 'text-sky-300');
+                            }
+
+                            const finalTotal = rollVal + bonus;
+                            if (finalTotal >= 10) {
+                                playSynthSound('loot');
+                                log(`[檢定成功] (開鎖擲骰 ${rollVal} + 加成 ${bonus} = ${finalTotal} >= 難度 10)。你極其精細地用金屬絲鎖死機關！陷阱癱瘓，防禦徹底解開！`, 'text-emerald-400 font-bold');
+                                gameState.trapSuccessFourLoot = true; 
+                                gameState.pendingNextScene = 'corridor_2';
+                                renderScene('node_loot_phase');
+                            } else {
+                                log(`[檢定失敗] (開鎖擲骰 ${rollVal} + 加成 ${bonus} = ${finalTotal} < 難度 10)。齒輪高速崩彈，一發鋼製弩箭自暗處弩射而出！`, 'text-rose-300');
+                                
+                                const trapHitRoll = roll(20);
+                                const trapTotalHit = trapHitRoll + 9;
+                                const playerAC = gameState.player.currentAC;
+
+                                log(`[防禦判定] 弩箭飛速射來！(弩箭命中值: ${trapHitRoll}+9 = ${trapTotalHit} vs 你的防禦值 AC: ${playerAC})`, 'text-indigo-300');
+                                if (trapTotalHit >= playerAC) {
+                                    playSynthSound('hit');
+                                    const damage = 1 + roll(6); 
+                                    gameState.player.hp -= damage;
+                                    log(`[防禦失敗] 物理重弩狠狠貫穿了你的防禦，造成了 ${damage} 點穿刺傷害！`, 'text-rose-500 font-bold');
+                                } else {
+                                    log(`[防禦成功] 🛡️ 驚險萬分！你憑藉厚實精良的護甲 AC 防禦 (${playerAC})，鋼箭擊在盾牌或盔甲上，清脆彈開！你毫髮無損！`, 'text-emerald-400 font-bold');
+                                }
+                                updateStats();
+                                if (gameState.player.hp <= 0) {
+                                    renderScene('gameOver');
+                                } else {
+                                    gameState.trapSuccessFourLoot = false;
+                                    gameState.pendingNextScene = 'corridor_2';
+                                    renderScene('node_loot_phase');
+                                }
+                            }
+                        }
+                    });
+                    break;
+
+                case 'corridor_2':
+                    const enemiesLayer2 = [
+                        { name: '鯊化魚人', hp: 38, ac: 13, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, coldWeak: true, hitBonus: 1, lightningWeak: true, desc: '一隻雙眼通紅、手持鋸齒三叉戟的 <span class="text-rose-400 font-bold">鯊化魚人 (怕冰/怕電/類人)</span> 從暗處撲出，雙眼散發著海洋深淵的腥味！' },
+                        { name: '暗影教徒', hp: 35, ac: 13, dmg: 6, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 0, desc: '一名穿著黑袍的 <span class="text-rose-400 font-bold">暗影教徒</span> 正在進行儀式。他轉過頭，雙眼閃爍著瘋狂的光芒：「獻上你的血！」' },
+                        { name: '奪心魔', hp: 38, ac: 13, dmg: 7, type: 'aberration', isFlying: false, legs: 2, hitBonus: 1, desc: '一隻散發著強烈精神壓迫感的 <span class="text-rose-400 font-bold">奪心魔</span> 從陰暗中現身，其黏稠的紫色面部觸手緩緩蠕動，雙眼閃爍著飢餓的幽光！' },
+                        { name: '觀察者眼魔', hp: 32, ac: 12, dmg: 6, type: 'aberration', isFlying: true, legs: 0, hitBonus: 1, desc: '一團由無數尖叫眼球與扭曲血肉組成的 <span class="text-rose-400 font-bold">觀察者眼魔 (飛行)</span> 憑空漂浮，空氣中迴盪著刺耳的理智崩解聲！' },
+                        { name: '邪教執法者', hp: 42, ac: 14, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名手持重型釘頭錘、身披鎖子甲的 <span class="text-rose-400 font-bold">邪教執法者 (命中加成+2)</span> 大步走來，低吟著深淵之歌。' },
+                        { name: '異界畸變體', hp: 40, ac: 11, dmg: 8, type: 'aberration', isFlying: false, legs: 4, hitBonus: 1, desc: '一隻全身長滿不規則骨刺與黏液管道的 <span class="text-rose-400 font-bold">異界畸變體</span> 瘋狂地扭動著身軀，發出令人作嘔的嘶鳴！' },
+                        { name: '鐵甲食人魔', hp: 45, ac: 11, dmg: 7, type: 'giant', isFlying: false, legs: 2, hitBonus: 2, desc: '一隻身披重鐵護甲、力大無窮的 <span class="text-rose-400 font-bold">鐵甲食人魔 (命中加成+2)</span> 正在啃食著骸骨，發出巨吼。' },
+                        { name: '無頭騎士', hp: 40, ac: 14, dmg: 6, type: 'undead', isFlying: false, legs: 2, hitBonus: 2, desc: '一名身姿雄偉的戰將 <span class="text-rose-400 font-bold">無頭騎士 (命中加成+2)</span> 巡邏至此。他發現了你，拔出燃燒的長槍發起衝鋒！' },
+                        { name: '怨毒幽魂', hp: 30, ac: 12, dmg: 8, type: 'undead', isFlying: true, legs: 0, hitBonus: 0, desc: '空氣變得冰冷，一隻半透明的 <span class="text-rose-400 font-bold">怨毒幽魂</span> 從牆壁中穿出，發出刺耳的尖嘯！' },
+                        { name: '雙頭巨人', hp: 48, ac: 10, dmg: 8, type: 'giant', isFlying: false, legs: 2, hitBonus: 2, desc: '一隻擁有雙頭、瘋狂揮舞巨棒的 <span class="text-rose-400 font-bold">雙頭巨人 (命中加成+2)</span> 鎖定了你！' },
+                        { name: '石像鬼', hp: 32, ac: 15, dmg: 6, type: 'monstrosity', isFlying: true, legs: 2, hitBonus: 1, desc: '一尊灰白石雕般的 <span class="text-rose-400 font-bold">石像鬼</span> 突然展開雙翼，雙爪發出刺耳摩擦聲向你俯衝！' },
+                        { name: '奇美拉幼獸', hp: 38, ac: 13, dmg: 7, type: 'monstrosity', isFlying: false, legs: 4, hitBonus: 1, desc: '一隻擁有獅身、羊頭與蛇尾的 <span class="text-rose-400 font-bold">奇美拉幼獸</span> 對你與利齒齜牙，敏捷地踏過滿地骸骨。' },
+                        { name: '寒冰元素', hp: 36, ac: 14, dmg: 7, type: 'elemental', isFlying: false, legs: 0, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '大廳的白霜凝聚成巨大的 <span class="text-rose-400 font-bold">寒冰元素 (怕火/冰免)</span>，雙臂揮舞著尖銳冰錐！' },
+                        { name: '腐化巨樹人', hp: 50, ac: 12, dmg: 7, type: 'plant', isFlying: false, legs: 2, fireWeak: true, hitBonus: 1, desc: '一株身體乾枯、帶著蠻力與死靈惡臭的 <span class="text-rose-400 font-bold">腐化巨樹人 (力大無窮/怕火)</span> 帶著滿地枯葉重步踏步而來！' }
+                    ];
+                    const randomEnemy2 = enemiesLayer2[Math.floor(Math.random() * enemiesLayer2.length)];
+                    
+                    display.innerHTML = `
+                        <div class="text-center max-w-md mx-auto py-4">
+                            <h2 class="text-2xl font-bold text-white mb-4 animate-fade-in">第二層：祭祀大廳</h2>
+                            <p class="mb-4">你來到一個寬闊的大廳，中央有一座血腥的祭壇。${randomEnemy2.desc}</p>
+                        </div>
+                    `;
+                    addActionButton('阻止它，戰鬥！', () => startCombat(randomEnemy2, 'post_combat_2'));
+                    break;
+
+                case 'post_combat_2':
+                    display.innerHTML = `
+                        <div class="text-center max-w-md mx-auto py-4">
+                            <h2 class="text-2xl font-bold text-white mb-4 animate-fade-in">通往深淵的階梯</h2>
+                            <p class="mb-4">敵人倒在血泊中，祭壇後方出現了一道向下的螺旋深邃階梯。你感覺到強大且未知的邪惡阻礙在下方通道中醞釀。</p>
+                        </div>
+                    `;
+                    addActionButton('搜刮祭壇 (掉寶區，隨後進入螺旋通道隨機突襲)', () => {
+                        gameState.pendingNextScene = 'pre_rest_combat'; 
+                        renderScene('node_loot_phase');
+                    });
+                    addActionButton('直接往下走 (戰勝貪婪，獲得深淵賜福！隨後進入螺旋通道隨機突襲)', () => window.skipLootBlessing());
+                    break;
+
+                case 'pre_rest_combat':
+                    const preRestEnemies = [
+                        { name: '鯊化魚人', hp: 38, ac: 13, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, coldWeak: true, hitBonus: 1, lightningWeak: true, desc: '一隻在盤旋階梯中游蕩的 <span class="text-rose-400 font-bold">鯊化魚人 (怕冰/怕電/類人)</span> 朝你發出刺耳的尖嘯並挺起三叉戟！' },
+                        { name: '巨蜘蛛', hp: 20, ac: 13, dmg: 4, type: 'beast', isFlying: false, legs: 8, hitBonus: 0, desc: '一隻全身布滿岩石花紋的 <span class="text-rose-400 font-bold">巨蜘蛛</span> 突然自盤旋階梯天花板夾縫倒掛垂降！' },
+                        { name: '食屍鬼', hp: 25, ac: 12, dmg: 5, type: 'undead', isFlying: false, legs: 2, hitBonus: 1, desc: '一具在梯段間游蕩覓食的 <span class="text-rose-400 font-bold">食屍鬼</span> 嗅到了生人的氣息，興奮地嚎叫著衝來！' },
+                        { name: '狂暴藤蔓', hp: 22, ac: 12, dmg: 4, type: 'plant', isFlying: false, legs: 0, fireWeak: true, hitBonus: 0, desc: '一株深深鑽入台階裂縫中的 <span class="text-rose-400 font-bold">狂暴藤蔓 (怕火)</span> 揮舞著粗大帶倒鉤的刺鬚，擋住了唯一的去路！' },
+                        { name: '毒尾蠍', hp: 18, ac: 14, dmg: 5, type: 'beast', isFlying: false, legs: 8, hitBonus: 1, desc: '一隻隱藏在盤梯碎石縫中的 <span class="text-rose-400 font-bold">毒尾蠍 (命中加成)</span> 猛地刺出毒針，阻攔你的深入！' },
+                        { name: '冬狼', hp: 20, ac: 13, dmg: 5, type: 'beast', isFlying: false, legs: 4, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '一隻裝載硬雪外殼的 <span class="text-rose-400 font-bold">冬狼 (怕火/冰免/命中加成)</span> 帶著徹骨寒氣撲面咬來！' },
+                        { name: '獸人暴徒', hp: 30, ac: 11, dmg: 5, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名在階梯死角進行埋伏的 <span class="text-rose-400 font-bold">獸人暴徒 (命中加成+2)</span> 大步流星地掄起沉重棒槌向你砸來！' },
+                        { name: '骷髏戰士', hp: 22, ac: 14, dmg: 6, type: 'undead', isFlying: false, legs: 2, hitBonus: 1, desc: '一具在梯段間游蕩的 <span class="text-rose-400 font-bold">骷髏戰士 (命中加成+1)</span> 生硬地扭過骨頭頭顱，提著生鏽鐵劍向你猛斬！' }
+                    ];
+                    const randomPreRestEnemy = preRestEnemies[Math.floor(Math.random() * preRestEnemies.length)];
+                    display.innerHTML = `
+                        <div class="text-center max-w-md mx-auto py-4">
+                            <h2 class="text-2xl font-bold text-white mb-4 animate-fade-in">突發突襲：營地前的陰影</h2>
+                            <p class="mb-4">當你沿著盤旋向下的階梯走去，依慢看見底下不遠處透露出篝火營地的溫暖火光時，暗影中一頭怪獸突然截擊了你！</p>
+                            <p class="mb-4">${randomPreRestEnemy.desc}</p>
+                            <p class="text-amber-400 italic">在抵達安全的篝火營地休整之前，你必須消滅這名攔路的爪牙！</p>
+                        </div>
+                    `;
+                    addActionButton('拔出兵刃，決死防禦！', () => startCombat(randomPreRestEnemy, 'rest_point'));
+                    break;
+
+                case 'rest_point':
+                    if (gameState.player.abilities) {
+                        const baseClassKey = Object.keys(classes).find(k => classes[k].name === gameState.player.name);
+                        if (baseClassKey) {
+                            const baseClass = classes[baseClassKey];
+                            gameState.player.abilities.forEach(ab => {
+                                const baseAb = baseClass.abilities.find(b => b.id === ab.id);
+                                if (baseAb) ab.cost = baseAb.cost;
+                            });
+                        }
+                    }
+                    gameState.player.maxHp += 10;
+                    gameState.player.hp = gameState.player.maxHp;
+                    playSynthSound('heal');
+                    log(`在營火旁休息，獲得了【篝火的祝福】！最大生命值 +10，並恢復所有生命與技能次數！`, 'text-emerald-400 font-bold');
+                    updateStats();
+
+                    display.innerHTML = `
+                        <div class="bg-blue-900/20 border border-blue-500/30 p-6 rounded-xl animate-fade-in text-center max-w-lg mx-auto">
+                            <h2 class="text-3xl font-bold text-sky-400 mb-4 drop-shadow">🔥 篝火營地</h2>
+                            <p class="mb-4 text-gray-200">在深淵的最底層入口前，你發現了一個廢棄的冒險者營地。營火的營火還散發著令人安心的微光。</p>
+                            <p class="mb-4 text-gray-200">你在這裡稍作休息，整理裝備。你<span class="text-emerald-400 font-bold">獲得了最大生命值 +10 的增益，生命值完全恢復，並完全補滿了所有技能的使用次數</span>。</p>
+                            <p class="text-amber-200 italic">面對即將到來的最終戰鬥，你做好了萬全準備。</p>
+                        </div>
+                    `;
+                    addActionButton('踏入深淵，迎戰首領', () => renderScene('boss_room'));
+                    break;
+
+                case 'boss_room':
+                    const bosses = [
+                        { name: '鯊化魚人男爵 (BOSS)', hp: 60, ac: 14, dmg: 8, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, coldWeak: true, lightningWeak: true, desc: '一尊高大無比、滿身覆蓋深藍鱗片且生有利爪的 <span class="text-rose-400 font-bold">鯊化魚人男爵 (BOSS/類人生物/怕冰/怕電/巨型)</span> 狂嘯著踏浪而來，手中的三叉戟泛著殘忍的血光！' },
+                        { name: '深淵死亡騎士 (BOSS)', hp: 55, ac: 15, dmg: 7, type: 'undead', isFlying: false, legs: 2, hitBonus: 2, desc: '一個高大的身影坐在骸骨王座上。那是身經百戰、劍技通神的 <span class="text-rose-400 font-bold">深淵死亡騎士 (BOSS/不死生物)</span>！他拔出燃燒著黑炎的巨劍，緩緩走向你。' },
+                        { name: '眼魔暴君 (BOSS)', hp: 50, ac: 14, dmg: 8, type: 'aberration', isFlying: true, legs: 0, hitBonus: 0, desc: '空間突然扭曲，一隻長滿觸手與巨大眼球的龐然大物浮現。那是邪惡的 <span class="text-rose-400 font-bold">眼魔暴君 (BOSS)</span>！它多顆眼球閃爍著致命的魔法光芒，死死盯著你。' },
+                        { name: '深紅巨龍 (BOSS)', hp: 65, ac: 15, dmg: 6, type: 'dragon', isFlying: true, legs: 4, fireImmune: true, hitBonus: 2, desc: '地穴開始劇烈震動，岩漿從縫隙中湧出。一頭蠻力無雙、噴吐著烈焰的 <span class="text-rose-400 font-bold">深紅巨龍 (BOSS/火焰免疫/命中加成+2)</span> 從深淵中爬出！' },
+                        { name: '巫妖 (BOSS)', hp: 60, ac: 16, dmg: 9, type: 'undead', isFlying: false, legs: 2, hitBonus: 0, desc: '王座前站立著一名形如枯骨的 <span class="text-rose-400 font-bold">巫妖 (BOSS/不死生物)</span>！他周圍環繞著綠色的死靈魔法，空洞的眼窩鎖定了你。' },
+                        { name: '深淵炎魔 (BOSS)', hp: 70, ac: 14, dmg: 10, type: 'fiend', isFlying: false, legs: 2, fireImmune: true, hitBonus: 1, desc: '岩漿沸騰，一隻力大無窮、手持火焰長鞭的 <span class="text-rose-400 font-bold">深淵炎魔 (BOSS/火焰免疫/命中加成)</span> 破土而出！它狂笑著，準備將你撕碎。' },
+                        { name: '縫合巨怪 (BOSS)', hp: 80, ac: 11, dmg: 8, type: 'undead', isFlying: false, legs: 2, hitBonus: 2, desc: '一隻由無數屍塊拼湊、蠻橫無比的 <span class="text-rose-400 font-bold">縫合巨怪 (BOSS/不死生物/命中加成+2)</span> 擋住了去路！它每走一步，大地都在震顫。' },
+                        { name: '深淵九頭蛇蜥 (BOSS)', hp: 75, ac: 12, dmg: 7, type: 'monstrosity', isFlying: false, legs: 4, hitBonus: 2, desc: '一隻盤踞在大廳、有著九個嘶吼頭顱且力量驚人的 <span class="text-rose-400 font-bold">深淵九頭蛇蜥 (BOSS/命中加成+2)</span> 探出頭來，九對豎瞳鎖定了你！' },
+                        { name: '奪心魔長老 (BOSS)', hp: 58, ac: 14, dmg: 9, type: 'aberration', isFlying: true, legs: 2, hitBonus: 0, desc: '空間中響起尖銳的心靈低語，一隻長著紫色觸鬚、身披華麗長袍的 <span class="text-rose-400 font-bold">奪心魔長老 (BOSS/飛行)</span> 悄無聲息地在半空滑動，其腦袋閃動著幽紫心靈光暈！' },
+                        { name: '虛空吞噬獸 (BOSS)', hp: 72, ac: 13, dmg: 8, type: 'aberration', isFlying: false, legs: 6, hitBonus: 1, desc: '一團從虛空裂隙中爬出、力大無比且長滿利齒與六條節肢的 <span class="text-rose-400 font-bold">虛空吞噬獸 (BOSS/命中加成)</span> 發出深沉的咆哮！' },
+                        { name: '霜巨人領主 (BOSS)', hp: 75, ac: 13, dmg: 9, type: 'giant', isFlying: false, legs: 2, fireWeak: true, coldImmune: true, hitBonus: 2, desc: '徹骨寒風中，一個披著萬年寒霜、揮舞寒冰巨斧的 <span class="text-rose-500 font-bold">霜巨人領主 (BOSS)</span> 跨步走來！' },
+                        { name: '純白雪龍 (BOSS)', hp: 60, ac: 18, dmg: 8, type: 'dragon', isFlying: true, legs: 2, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '天穹灑下碎冰，一隻身披雪白色晶瑩鱗片、振翼擊風的巨大 <span class="text-rose-400 font-bold">純白雪龍 (BOSS)</span> 展開雙翼，刮起極地狂風暴雪！' },
+                        { name: '墮落聖騎士 (BOSS)', hp: 60, ac: 16, dmg: 8, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一尊高聳的鋼鐵身影欄在出口前。那是曾守護王國卻沉淪至深淵的 <span class="text-rose-400 font-bold">墮落聖騎士 (BOSS/類人生物/命中加成+2)</span>！他揮舞著污染的神聖復仇之劍，眼中閃爍著無情的殺意。' }
+                    ];
+                    const randomBoss = bosses[Math.floor(Math.random() * bosses.length)];
+
+                    display.innerHTML = `
+                        <div class="text-center max-w-md mx-auto py-4">
+                            <h2 class="text-3xl font-bold text-rose-500 mb-4 drop-shadow-md animate-fade-in">👑 最終決戰：深淵深處</h2>
+                            <p class="mb-4 text-lg">在巨大的地下空間中，${randomBoss.desc}</p>
+                            <p class="text-gray-300">「愚蠢的凡人，你的靈魂將永遠留在這裡！」</p>
+                        </div>
+                    `;
+                    addActionButton('為了榮耀與生存，決一死戰！', () => startCombat(randomBoss, 'post_boss_choice'));
+                    break;
+
+                case 'post_boss_choice':
+                    display.innerHTML = `
+                        <div class="bg-indigo-950/40 border border-indigo-500/50 p-6 rounded-xl shadow-lg animate-fade-in text-center space-y-4 max-w-lg mx-auto">
+                            <h2 class="text-3xl font-bold text-amber-400">🚪 宿命的分岔路</h2>
+                            <p class="text-lg text-gray-200">深淵最深處的領主已然倒下，通往地表之門正在緩緩重鑄。然而，在你眼前的無盡深邃中，一條更加古老黑暗、瀰漫著太古威壓的傳奇通道也隨之裂開...</p>
+                            <p class="text-amber-200 italic font-semibold">「你是打算就此帶著財寶返回陽光世界，還是挑戰那些被時光塵封的古老禁忌？」</p>
+                        </div>
+                    `;
+                    addActionButton('見好就收 (維持當前結局並返回地表)', () => renderScene('victory'));
+                    addActionButton('深入挑戰傳奇 (隨機四件傳奇裝備挑選，往洞穴更深處探索！)', () => {
+                        gameState.trapSuccessFourLoot = true; 
+                        gameState.pendingNextScene = 'legendary_corridor';
+                        renderScene('node_loot_phase');
+                    });
+                    break;
+
+                case 'legendary_corridor':
+                    const legCorridorEnemies = [
+                        { name: '鯊化魚人', hp: 38, ac: 13, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, coldWeak: true, hitBonus: 1, lightningWeak: true, desc: '一隻在深邃迴廊埋伏的 <span class="text-rose-400 font-bold">鯊化魚人 (怕冰/怕電/類人)</span> 向你逼近，眼中流露嗜血之意！' },
+                        { name: '暗影教徒', hp: 35, ac: 13, dmg: 6, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 0, desc: '一名穿著黑袍的 <span class="text-rose-400 font-bold">暗影教徒</span> 攔住去路！他狂熱地嚎叫：「沒有人能驚擾沉睡的傳奇神話！」' },
+                        { name: '奪心魔', hp: 38, ac: 13, dmg: 7, type: 'aberration', isFlying: false, legs: 2, hitBonus: 1, desc: '一隻散發著強烈精神壓迫感的 <span class="text-rose-400 font-bold">奪心魔</span> 從暗處現身，試圖在傳奇禁地入口奴役你的心靈！' },
+                        { name: '觀察者眼魔', hp: 32, ac: 12, dmg: 6, type: 'aberration', isFlying: true, legs: 0, hitBonus: 1, desc: '一團由無數尖叫眼球與扭曲血肉組成的 <span class="text-rose-400 font-bold">觀察者眼魔 (飛行)</span> 在前方游蕩，用多向魔眼鎖定了你！' },
+                        { name: '邪教執法者', hp: 42, ac: 14, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名手持重型釘頭錘、身披鎖子甲的 <span class="text-rose-400 font-bold">邪教執法者 (命中加成+2)</span> 大步走來，擋在了傳奇通道的前哨。' }
+                    ];
+                    const randomLegEnemy = legCorridorEnemies[Math.floor(Math.random() * legCorridorEnemies.length)];
+                    display.innerHTML = `
+                        <div class="text-center max-w-md mx-auto py-4">
+                            <h2 class="text-2xl font-bold text-white mb-4 animate-fade-in">傳奇前哨：深淵迴廊</h2>
+                            <p class="mb-4">你選擇向地穴最危險的未知深處進發。這裡的重力與空間結構極其不穩定，四周迴盪著瘋狂的囈語。</p>
+                            <p class="mb-4">${randomLegEnemy.desc}</p>
+                        </div>
+                    `;
+                    addActionButton('解決攔路者！', () => startCombat(randomLegEnemy, 'legendary_rest'));
+                    break;
+
+                case 'legendary_rest':
+                    if (gameState.player.abilities) {
+                        const baseClassKey = Object.keys(classes).find(k => classes[k].name === gameState.player.name);
+                        if (baseClassKey) {
+                            const baseClass = classes[baseClassKey];
+                            gameState.player.abilities.forEach(ab => {
+                                const baseAb = baseClass.abilities.find(b => b.id === ab.id);
+                                if (baseAb) ab.cost = baseAb.cost;
+                            });
+                        }
+                    }
+                    gameState.player.maxHp += 10;
+                    gameState.player.hp = gameState.player.maxHp;
+                    playSynthSound('heal');
+                    log(`在傳奇營火旁休息，獲得了【神話篝火的祝福】！最大生命值 +10，並恢復所有生命與技能次數！`, 'text-emerald-400 font-bold');
+                    updateStats();
+
+                    display.innerHTML = `
+                        <div class="bg-blue-900/20 border border-blue-500/30 p-6 rounded-xl animate-fade-in text-center max-w-lg mx-auto">
+                            <h2 class="text-3xl font-bold text-sky-400 mb-4 drop-shadow">🔥 傳奇營地</h2>
+                            <p class="mb-4 text-gray-200">在神話與噩夢的邊緣，你點燃了最後一簇微弱的傳奇營火。</p>
+                            <p class="mb-4 text-gray-200">你在這裡稍作休息，整理裝備。你<span class="text-emerald-400 font-bold">獲得了最大生命值 +10 的增益，生命值完全恢復，並完全補滿了所有技能的使用次數</span>。</p>
+                            <p class="text-amber-200 italic">準備好，前方就是傳奇的宿命之地，神話首領正等待你的到來。</p>
+                        </div>
+                    `;
+                    addActionButton('踏入傳奇領域', () => renderScene('legendary_boss_room'));
+                    break;
+
+                case 'legendary_boss_room':
+                    const legendaryBosses = [
+                        { name: '鯊化魚人親王 (LEGENDARY BOSS)', hp: 85, ac: 15, dmg: 10, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 6, coldWeak: true, lightningWeak: true, isSahuaginPrince: true, desc: '一位身披深海珊瑚魔甲、手持雷湧三叉戟的 <span class="text-rose-500 font-black">鯊化魚人親王 (傳奇首領/類人/怕冰/怕電/巨型)</span> 破浪而出！他週身環繞著狂暴的水元素，雙眼滿是狂暴的殺意！' },
+                        { name: '半神巫妖 (LEGENDARY BOSS)', hp: 65, ac: 18, dmg: 9, type: 'undead', isFlying: true, legs: 2, hitBonus: 9, isDemilich: true, desc: '虛空中懸浮著一顆由無數靈魂寶石裝飾的金色頭骨，雙眼噴吐著冰冷的死靈焰火。那是超越生死的存在——<span class="text-rose-500 font-black">半神巫妖 (傳奇首領)</span>！他發出空洞刺骨的冷笑。' },
+                        { name: '主腦 (LEGENDARY BOSS)', hp: 100, ac: 1, dmg: 9, type: 'aberration', isFlying: false, legs: 0, hitBonus: 5, isElderBrain: true, lightningWeak: true, desc: '大廳中央的黏液池中，一個巨大的、充滿褶皺的粉紅色大腦正在劇烈脈動，無數半透明的心靈觸鬚在虛空中瘋狂揮舞。那是心靈異怪的至高主宰——<span class="text-rose-500 font-black">主腦 (傳奇首領/怕電)</span>！' },
+                        { name: '精靈傳奇大法師 (LEGENDARY BOSS)', hp: 75, ac: 14, dmg: 12, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 5, isElvenArchmage: true, desc: '一名肌肉壯實，臉皮彷彿被撕下來精靈男子，手中法杖散發著毀天滅地的祕法亂流，傲慢的眼神將你視作微不足道的螻蟻。那是追求真理至瘋魔的——<span class="text-rose-500 font-black">精靈傳奇大法師 (傳奇首領)</span>！' },
+                        { name: '上古紅龍 (LEGENDARY BOSS)', hp: 90, ac: 18, dmg: 8, dmgBonus: 5, type: 'dragon', isFlying: true, legs: 4, fireImmune: true, coldWeak: true, hitBonus: 9, desc: '大地突然劇烈撕裂，滾燙 of 熔岩如噴泉般湧出！一頭雙翼遮天幕日、渾身散發古老毀滅威壓的 <span class="text-rose-500 font-black">上古紅龍 (傳奇首領/火焰免疫/怕冰/命中加成+9)</span> 緩緩降臨，熔岩在其鱗甲間流淌！' },
+                        { name: '巨型原初梟熊 (LEGENDARY BOSS)', hp: 85, ac: 16, dmg: 8, dmgBonus: 3, type: 'beast', isFlying: true, legs: 4, hitBonus: 6, isPrimalOwlbear: true, desc: '一頭體型龐大、覆蓋著鋼鐵般羽毛的 <span class="text-rose-500 font-black">巨型原初梟熊 (傳奇首領/野獸/飛行/巨型)</span> 猛然張開佈滿利齒的巨喙，狂風隨著其翅膀羽翼的拍打呼嘯而至！' },
+                        { name: '傳奇六臂蛇魔 (LEGENDARY BOSS)', hp: 80, ac: 14, dmg: 3, dmgBonus: 2, type: 'fiend', isFlying: false, legs: 1, hitBonus: 6, isMarilith: true, desc: '一位有著致命女性上半身與龐大蟒蛇下半身的 <span class="text-rose-500 font-black">傳奇六臂蛇魔 (傳奇首領/惡魔)</span> 揮舞著六柄寒光閃閃的附魔大刀，帶著殘忍的微笑盯著你！' },
+                        { name: '鎧甲男子 (LEGENDARY BOSS)', hp: 80, ac: 20, dmg: 12, dmgBonus: 2, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 7, isArmorMan: true, desc: '一名身披沉重漆黑魔甲、戴著崢嶸角盔的男子緩步踏出，他手握一柄滿是符文乾涸血漬的狂暴巨劍，雙眼燃燒著邪神之火。那是擁有不朽邪神血脈的——<span class="text-rose-500 font-black">鎧甲男子 (傳奇首領/人形生物)</span>！' }
+                    ];
+                    const randomLegBoss = legendaryBosses[Math.floor(Math.random() * legendaryBosses.length)];
+                    
+                    display.innerHTML = `
+                        <div class="text-center max-w-md mx-auto py-4">
+                            <h2 class="text-3xl font-extrabold text-rose-500 mb-4 drop-shadow-md animate-fade-in">👑 終極試煉：傳奇神話的對決</h2>
+                            <p class="mb-4 text-lg">在連時間與光線都被吞噬的深淵最底層，傳奇首領冷冷地注視著你。</p>
+                            <p class="mb-4 text-lg">${randomLegBoss.desc}</p>
+                        </div>
+                    `;
+                    
+                    if (randomLegBoss.isDemilich) {
+                        log(`💀 半神巫妖尖聲咆哮：「現在死吧，成為完美的一部分。」`, 'text-rose-400 font-bold text-lg animate-pulse');
+                    } else if (randomLegBoss.isElderBrain) {
+                        log(`🧠 主腦的心靈波震碎虛空：「加入、加入！成為奴隸！」`, 'text-rose-400 font-bold text-lg animate-pulse');
+                    } else if (randomLegBoss.isElvenArchmage) {
+                        log(`⚡ 精靈傳奇大法師高傲宣告：「我無法被囚禁。我無法被控制。在你死前給我記住這點，你們這群永遠可悲，永遠愚蠢的螻蟻！」`, 'text-rose-400 font-bold text-lg animate-pulse');
+                    } else if (randomLegBoss.name.includes('上古紅龍')) {
+                        log(`🔥 上古紅龍發出低沉龍吼，空氣中瞬間燃起熊熊烈火：「小東西，迎接你的葬禮吧。」`, 'text-rose-400 font-bold text-lg animate-pulse');
+                    } else if (randomLegBoss.isArmorMan) {
+                        log(`⚔️ 鎧甲男子發出振奮的回音：「我活過來了！擁有血、肉、還有骨頭！我還活著！哈哈！我曾發誓就算用抓的、用爬的也要回到活人的世界……而我做到了！"`, 'text-rose-400 font-bold text-lg animate-pulse');
+                    } else if (randomLegBoss.isSahuaginPrince) {
+                        log(`🌊 鯊化魚人親王昂首狂笑，重戟直指你心口：「卑微的陸地爬蟲，今日此處即為你的葬身之洋！」`, 'text-rose-400 font-bold text-lg animate-pulse');
+                    }
+
+                    addActionButton('鑄造傳奇，決戰！', () => startCombat(randomLegBoss, 'legendary_victory'));
+                    break;
+
+                case 'victory':
+                    display.innerHTML = `
+                        <div class="text-center space-y-6 animate-fade-in py-4">
+                            <h2 class="text-4xl font-black text-amber-400 drop-shadow-lg mb-4">🏆 試煉完成！</h2>
+                            <p class="text-xl text-gray-200">頭目轟然倒地，化為一縷黑煙消散。地穴的詛咒被打破了。</p>
+                            <p class="text-lg text-emerald-300">你成功帶著財寶與榮耀，活著走出了耳語地穴！</p>
+                            <div class="text-6xl my-8">🎉👑💰</div>
+                        </div>
+                    `;
+                    actions.className = 'flex justify-center items-center shrink-0 w-full max-w-xs mx-auto';
+                    addActionButton('重新開始冒險', () => location.reload());
+                    break;
+
+                case 'legendary_victory':
+                    playSynthSound('loot');
+                    display.innerHTML = `
+                        <div class="text-center space-y-6 animate-fade-in py-6">
+                            <h2 class="text-5xl font-black text-amber-400 drop-shadow-[0_5px_15px_rgba(245,158,11,0.5)] mb-4 tracking-widest animate-pulse">👑 鑄就至高神話！ 👑</h2>
+                            <p class="text-2xl font-bold text-emerald-300">你成功戰勝了不可一世的深淵傳奇主宰！</p>
+                            <div class="bg-slate-900/80 border border-amber-500/50 p-6 rounded-2xl max-w-2xl mx-auto space-y-4 shadow-2xl leading-relaxed text-left text-gray-200">
+                                <p>在凡人口耳相傳的故事中，耳語地穴曾是一座無人能還的血色墓穴。但今天，你用鋼鐵般的意志、無與倫比的智慧與力量，親手斬殺了地穴最深處的恐怖禁忌！</p>
+                                <p class="font-bold text-amber-300">即便是傳奇，都在你的武器與奧法面前灰飛煙滅！</p>
+                                <p>你的名字將永遠鐫刻在冒險者的大理石神殿最頂峰。人們不會僅稱你為「探險者」或「英雄」——因為從這一刻起，你本身就是迴盪於整個世界中的<span class="text-amber-400 font-extrabold">永恆傳奇</span>！</p>
+                            </div>
+                            <div class="text-7xl my-8 drop-shadow-md">🏆🌌👑⚔️💎</div>
+                        </div>
+                    `;
+                    actions.className = 'flex justify-center items-center shrink-0 w-full max-w-xs mx-auto';
+                    addActionButton('重新開始冒險', () => location.reload());
+                    break;
+
+                case 'gameOver':
+                    playSynthSound('gameover');
+                    display.innerHTML = `
+                        <div class="text-center space-y-6 animate-fade-in py-4">
+                            <h2 class="text-4xl font-black text-rose-600 drop-shadow-lg mb-4">💀 你死去了...</h2>
+                            <p class="text-xl text-gray-300">你的視線逐漸模糊，身體倒在了冰冷的地穴中。</p>
+                            <p class="text-lg text-gray-400">又一個被深淵吞噬的靈魂...</p>
+                        </div>
+                    `;
+                    actions.className = 'flex justify-center items-center shrink-0 w-full max-w-xs mx-auto';
+                    addActionButton('再次挑戰', () => location.reload());
+                    break;
+            }
+            updateStats();
+        }
+
+        function addActionButton(text, onClick) {
+            const actions = document.getElementById('action-panel');
+            const btn = document.createElement('button');
+            btn.className = 'w-full bg-slate-700/80 hover:bg-slate-600 p-3 sm:p-4 rounded-xl border border-slate-500 font-bold text-white shadow-lg transition-all active:scale-95 text-center px-6';
+            btn.textContent = text;
+            btn.onclick = onClick;
+            actions.appendChild(btn);
+        }
+
+        function startCombat(enemyData, nextScene) {
+            enemyData.maxHp = enemyData.lockHp ? enemyData.hp : enemyData.hp; 
+            
+            let currentHp = enemyData.hp;
+            Object.defineProperty(enemyData, 'hp', {
+                get() { return currentHp; },
+                set(value) {
+                    let diff = currentHp - value; 
+                    currentHp = currentHp - diff;
+                    if (currentHp < 0) currentHp = 0;
+                    if (currentHp > enemyData.maxHp) currentHp = enemyData.maxHp;
+                },
+                configurable: true
+            });
+
+            gameState.currentEnemy = enemyData;
+            
+            gameState.combatState = {
+                rageTurns: 0,
+                enemyProneTurns: 0,
+                enemyBlindTurns: 0,
+                enemyStunnedTurns: 0,
+                enemyPoisonedTurns: 0, 
+                barbarianReckless: false,
+                stoneskinTurns: 0,
+                barkskinTurns: 0,          
+                enemyIntimidatedTurns: 0, 
+                fatigueTurns: 0,          
+                backstabCooldown: 0,
+                playerStunnedTurns: 0,
+                bossTurnCounter: 0,
+                enemyStoneskinTurns: 0,
+                playerFrozenTurns: 0,
+                playerProneTurns: 0
+            };
+            
+            if (gameState.player.abilities) {
+                gameState.player.abilities.forEach(ab => {
+                    if (ab.id === 'throw_sand') ab.cost = 3;
+                    if (ab.id === 'stun_strike') ab.cost = 3;
+                    if (ab.id === 'flurry') ab.cost = 5;
+                    if (ab.id === 'stoneskin') ab.cost = (gameState.player.name === '德魯伊') ? 1 : 2; 
+                    if (ab.id === 'barkskin') ab.cost = 2;  
+                    if (ab.id === 'fatigue_wave') ab.cost = 2;
+                    if (ab.id === 'hold_person') ab.cost = 4;
+                    if (ab.id === 'poison_dart') ab.cost = 3; 
+                });
+            }
+
+            log(`==== 戰鬥開始！遭遇了 ${enemyData.name} ====`, 'text-rose-400 font-bold text-lg');
+            gameState.scene = 'combat_' + nextScene; 
+            updateStats();
+            renderCombat(nextScene);
+        }
+
+        function renderCombat(nextScene) {
+            const display = document.getElementById('story-display');
+            const p = gameState.player;
+            const e = gameState.currentEnemy;
+            
+            const pPct = Math.max(0, Math.floor((p.hp / p.maxHp) * 100));
+            const ePct = Math.max(0, Math.floor((e.hp / e.maxHp) * 100));
+
+            const activeFlying = e.isFlying && !(gameState.combatState.fatigueTurns > 0);
+            
+            const isEnemyGiant = (e.type === 'giant' || e.type === 'dragon' || e.type === 'monstrosity' || e.name.includes('巨人') || e.name.includes('巨怪') || e.name.includes('巨龍') || e.name.includes('紅龍') || e.name.includes('九頭蛇') || e.name.includes('炎魔') || e.name.includes('吞噬獸') || e.name.includes('眼魔') || e.name.includes('梟熊') || e.name.includes('男爵') || e.name.includes('親王')) && !e.name.includes('奪心魔');
+
+            display.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full h-full animate-fade-in font-sans font-medium">
+                    
+                    <!-- 冒險者卡牌 -->
+                    <div id="player-combat-card" class="bg-slate-900/60 border border-indigo-500/30 rounded-xl p-4 flex flex-col justify-between shadow-lg">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <h3 class="font-bold text-lg text-indigo-300">冒險者 (${p.name})</h3>
+                                <span class="text-sm font-mono text-gray-400">🛡️ AC: <span id="card-player-ac" class="text-sky-300 font-bold">${p.currentAC}</span></span>
+                            </div>
+                            
+                            <div class="text-xs text-indigo-200/90 font-mono mb-2 bg-indigo-950/40 p-1.5 rounded border border-indigo-900/30 flex justify-between">
+                                <span>⚔️ 命中加成: <span id="card-player-hit-val" class="font-bold text-amber-300">+${p.currentAtkBonus}</span></span>
+                                <span>💥 傷害骰: <span id="card-player-dmg-val" class="font-bold text-amber-300">1D${gameState.player.baseDmgDie}+${gameState.player.baseDmgBonus + p.currentDmgBonus}</span></span>
+                            </div>
+
+                            <div class="w-full bg-slate-800 rounded-full h-4 overflow-hidden mb-2 border border-slate-700">
+                                <div id="card-player-hp-bar" class="bg-gradient-to-r from-red-500 via-emerald-500 to-green-400 h-full transition-all duration-300" style="width: ${pPct}%"></div>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="font-mono text-rose-300 font-bold"><span id="card-player-hp">${p.hp}</span> / <span id="card-player-max-hp">${p.maxHp}</span> HP</span>
+                                <span id="card-player-hp-pct" class="text-gray-400">${pPct}%</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 border-t border-slate-800/80 pt-2 flex flex-wrap gap-1.5 items-center">
+                            <span class="text-xs text-gray-400 font-mono">狀態:</span>
+                            <div id="card-player-buffs" class="flex flex-wrap gap-1"></div>
+                        </div>
+                    </div>
+
+                    <!-- 敵方卡牌 -->
+                    <div id="enemy-combat-card" class="bg-slate-900/60 border border-rose-500/30 rounded-xl p-4 flex flex-col justify-between shadow-lg">
+                        <div>
+                            <div class="flex justify-between items-start mb-1">
+                                <div>
+                                    <h3 class="font-bold text-lg text-rose-400 flex items-center gap-2">👹 ${e.name}</h3>
+                                    <div class="text-xs text-amber-400/80 mt-0.5 font-mono flex flex-wrap gap-1">
+                                        <span class="bg-red-950 border border-red-800 px-1.5 py-0.5 rounded text-[10px] text-rose-300 font-semibold mr-1">${e.type.toUpperCase()}</span>
+                                        ${isEnemyGiant ? '<span class="text-[10px] bg-amber-950 text-amber-300 border border-amber-800 px-1.5 py-0.5 rounded font-bold animate-pulse">🪐巨型</span>' : ''}
+                                        ${e.fireImmune ? '<span class="text-[10px] bg-orange-950 text-orange-300 px-1 rounded">🔥火免</span>' : ''} 
+                                        ${e.fireWeak ? '<span class="text-[10px] bg-red-900 text-red-100 px-1 rounded animate-pulse">🔥怕火</span>' : ''} 
+                                        ${e.coldImmune ? '<span class="text-[10px] bg-sky-950 text-sky-200 px-1 rounded">❄️冰免</span>' : ''} 
+                                        ${e.coldWeak ? '<span class="text-[10px] bg-blue-900 text-blue-100 px-1 rounded animate-pulse">❄️怕冰</span>' : ''} 
+                                        ${e.lightningWeak ? '<span class="text-[10px] bg-yellow-950 text-yellow-300 px-1.5 py-0.5 rounded animate-pulse font-bold">⚡怕電</span>' : ''}
+                                        ${activeFlying ? '<span class="text-[10px] bg-stone-800 text-stone-200 px-1 rounded">✈️飛行</span>' : ''} 
+                                        ${e.legs > 2 ? `<span class="text-[10px] bg-stone-800 text-stone-200 px-1 rounded">🦵多足(${e.legs})</span>` : ''}
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="text-sm font-mono text-gray-400">🛡️ AC: <span id="card-enemy-ac" class="text-sky-300 font-bold">${e.ac - (gameState.combatState.enemyProneTurns > 0 ? 4 : 0)}</span></span>
+                                </div>
+                            </div>
+
+                            <div class="text-xs text-rose-200/90 font-mono mb-2 bg-rose-950/40 p-1.5 rounded border border-rose-900/30 flex justify-between">
+                                <span>⚔️ 攻擊加成: <span class="font-bold text-amber-300">+${Math.floor(e.dmg / 2) + (e.hitBonus || 0)}</span></span>
+                                <span>💥 傷害骰: <span class="font-bold text-amber-300">1D${e.dmg}+${e.dmgBonus !== undefined ? e.dmgBonus : 2}</span></span>
+                            </div>
+
+                            <div class="w-full bg-slate-800 rounded-full h-4 overflow-hidden mb-2 border border-slate-700">
+                                <div id="card-enemy-hp-bar" class="bg-gradient-to-r from-red-600 to-rose-400 h-full transition-all duration-300" style="width: ${ePct}%"></div>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="font-mono text-rose-300 font-bold"><span id="card-enemy-hp">${e.hp}</span> / <span id="card-enemy-max-hp">${e.maxHp}</span> HP</span>
+                                <span id="card-enemy-hp-pct" class="text-gray-400">${ePct}%</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 border-t border-slate-800/80 pt-2 flex flex-wrap gap-1.5 items-center">
+                            <span class="text-xs text-gray-400 font-mono">狀態:</span>
+                            <div id="card-enemy-debuffs" class="flex flex-wrap gap-1"></div>
+                        </div>
+                    </div>
+
+                </div>
+            `;
+
+            const actions = document.getElementById('action-panel');
+            actions.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 shrink-0 min-h-[60px]';
+            actions.innerHTML = '';
+            
+            if (gameState.combatState.playerStunnedTurns > 0) {
+                 const btnStunned = document.createElement('button');
+                 btnStunned.className = 'bg-purple-900/80 p-4 rounded-xl font-bold text-purple-200 border border-purple-500 col-span-1 sm:col-span-2 text-center animate-pulse';
+                 btnStunned.innerHTML = `🌀 你的精神遭到麻痺！(剩餘 ${gameState.combatState.playerStunnedTurns} 回合) [點擊跳過回合]`;
+                 btnStunned.onclick = () => {
+                      gameState.combatState.playerStunnedTurns--;
+                      log(`🌀 你努力重組破碎的心智... 跳過本回合的行動。`, 'text-purple-300 italic');
+                      updateStats();
+                      
+                      actions.innerHTML = '<div class="col-span-1 sm:col-span-2 text-center text-rose-300 py-4 font-bold animate-pulse flex justify-center items-center h-full">⚔️ 雙方交鋒中...</div>';
+                      setTimeout(() => {
+                          enemyTurn(nextScene);
+                      }, 1000);
+                 };
+                 actions.appendChild(btnStunned);
+                 updateStats();
+                 return;
+            }
+
+            if (gameState.combatState.playerProneTurns > 0) {
+                 const btnProne = document.createElement('button');
+                 btnProne.className = 'bg-amber-900/80 p-4 rounded-xl font-bold text-amber-200 border border-amber-500 col-span-1 sm:col-span-2 text-center animate-pulse';
+                 btnProne.innerHTML = `🧼 你摔倒在地上！(剩餘 ${gameState.combatState.playerProneTurns} 回合) [點擊掙扎站起並跳過回合]`;
+                 btnProne.onclick = () => {
+                      gameState.combatState.playerProneTurns--;
+                      log(`🧼 你在冰冷的地面上艱難站起... 本回合無法進行其他動作。`, 'text-amber-300 italic');
+                      updateStats();
+                      
+                      actions.innerHTML = '<div class="col-span-1 sm:col-span-2 text-center text-rose-300 py-4 font-bold animate-pulse flex justify-center items-center h-full">⚔️ 雙方交鋒中...</div>';
+                      setTimeout(() => {
+                          enemyTurn(nextScene);
+                      }, 1000);
+                 };
+                 actions.appendChild(btnProne);
+                 updateStats();
+                 return;
+            }
+
+            const btnAttack = document.createElement('button');
+            btnAttack.className = 'bg-rose-700/80 hover:bg-rose-600 p-3 sm:p-4 rounded-xl font-bold text-white shadow-lg border border-rose-500 transition-all active:scale-95 flex flex-col items-center justify-center';
+            btnAttack.innerHTML = `<div class="text-lg">🗡️ 普通物理攻擊</div><span class="text-xs font-normal opacity-80 mt-1">命中加成: +${gameState.player.currentAtkBonus}</span>`;
+            btnAttack.onclick = () => playerTurn(nextScene, { type: 'attack' });
+            actions.appendChild(btnAttack);
+
+            if (gameState.player.abilities) {
+                gameState.player.abilities.forEach(ability => {
+                    const btnAbility = document.createElement('button');
+                    
+                    if (ability.id === 'shield') {
+                        btnAbility.className = 'bg-gray-800/80 p-3 sm:p-4 rounded-xl font-bold text-gray-500 cursor-not-allowed border border-gray-700 flex flex-col justify-center items-center';
+                        btnAbility.innerHTML = `<div class="text-lg">🛡️ ${ability.name}</div><span class="text-xs font-normal opacity-80 mt-1">被動觸發 (剩餘: ${ability.cost})</span>`;
+                    } else if (ability.cost !== 'inf' && ability.cost <= 0) {
+                        btnAbility.className = 'bg-gray-800/80 p-3 sm:p-4 rounded-xl font-bold text-gray-500 cursor-not-allowed border border-gray-700 flex flex-col justify-center items-center';
+                        btnAbility.innerHTML = `<div class="text-lg">${ability.name}</div><span class="text-xs font-normal opacity-80 mt-1">次數已耗盡</span>`;
+                    } else if (ability.id === 'backstab' && gameState.combatState.backstabCooldown > 0) {
+                        btnAbility.className = 'bg-gray-800/80 p-3 sm:p-4 rounded-xl font-bold text-gray-500 cursor-not-allowed border border-gray-700 flex flex-col justify-center items-center text-center';
+                        btnAbility.innerHTML = `<div class="text-lg">🔪 ${ability.name}</div><span class="text-xs font-normal opacity-80 mt-1">冷卻中 (剩餘 ${gameState.combatState.backstabCooldown} 回合)</span>`;
+                        btnAbility.disabled = true;
+                    } else if (ability.id === 'sneak_attack' && gameState.combatState.enemyBlindTurns <= 0) {
+                        btnAbility.className = 'bg-gray-800/80 p-3 sm:p-4 rounded-xl font-bold text-gray-500 cursor-not-allowed border border-gray-700 flex flex-col justify-center items-center text-center';
+                        btnAbility.innerHTML = `<div class="text-lg">🗡️ ${ability.name}</div><span class="text-xs font-normal opacity-80 mt-1">需要敵人處於目盲狀態</span>`;
+                    } else {
+                        btnAbility.className = 'bg-indigo-700/80 hover:bg-indigo-600 p-3 sm:p-4 rounded-xl font-bold text-white shadow-lg border border-indigo-500 transition-all active:scale-95 text-left flex flex-col justify-between';
+                        const costText = ability.cost === 'inf' ? '無限次' : `剩 ${ability.cost} 次`;
+                        let icon = '✨';
+                        if(ability.id === 'heavy_strike') icon = '💥';
+                        if(ability.id === 'intimidate') icon = '💢';
+                        if(ability.id === 'backstab') icon = '🔪';
+                        if(ability.id === 'throw_sand') icon = '💨';
+                        if(ability.id === 'sneak_attack') icon = '🗡️';
+                        if(ability.id === 'poison_dart') icon = '🎯';
+                        if(ability.id === 'heal' || ability.id === 'turn_undead') icon = '✝️';
+                        if(ability.id === 'divine_smite') icon = '⚔️';
+                        if(ability.id === 'brutal_strike') icon = '🪓';
+                        if(ability.id === 'rage') icon = '🔥';
+                        if(ability.id.includes('fireball')) icon = '🔥';
+                        if(ability.id === 'fatigue_wave') icon = '🌀';
+                        if(ability.id.includes('magic_missile')) icon = '🔵'; 
+                        if(ability.id === 'grease') icon = '🧪';
+                        if(ability.id === 'blind') icon = '👁️';
+                        if(ability.id === 'stoneskin') icon = '🧱';
+                        if(ability.id === 'barkskin') icon = '🌿';
+                        if(ability.id === 'stun_strike') icon = '⚡';
+                        if(ability.id === 'flurry') icon = '🤜';
+                        if(ability.id === 'sweep') icon = '🦵';
+                        if(ability.id === 'finger_of_death') icon = '💀';
+                        if(ability.id === 'blizzard') icon = '❄️';
+                        if(ability.id === 'hold_person') icon = '⛓️';
+                        if(ability.id === 'sunburst') icon = '☀️';
+                        if(ability.id === 'call_lightning') icon = '⚡';
+                        
+                        let customDesc = ability.desc;
+                        if (ability.id === 'sweep' && (gameState.player.name === '戰士' || gameState.player.name === '武僧')) {
+                            const hasShield = !!gameState.gear.shield;
+                            const hasStaff = gameState.gear.weapon && gameState.gear.weapon.id === 'staff_p1';
+                            const reductionActive = hasShield || hasStaff;
+                            const weaponReason = hasShield ? "裝備了精鋼盾牌" : (hasStaff ? "裝備了魔力法杖" : "");
+                            customDesc = reductionActive 
+                                ? `物理戰技：已啟動${weaponReason}優勢！命中懲罰由 -5 減輕至 -2！擊中將使非飛行/非植物對手跌倒並無法行動 1+1D3 回合且 AC-4。`
+                                : `物理戰技：命中-5。若裝備長杖（武僧/戰士適用）或盾牌（僅戰士適用）可使命中懲罰減輕至 -2。擊中使對手跌倒且無法行動 1+1D3 回合且 AC-4。`;
+                        }
+
+                        btnAbility.innerHTML = `
+                            <div class="flex justify-between items-center w-full">
+                                <span class="text-lg">${icon} ${ability.name}</span> 
+                                <span class="text-xs bg-indigo-900/50 px-2 py-1 rounded">${costText}</span>
+                            </div>
+                            <div class="text-xs font-normal mt-2 opacity-90 text-indigo-100">${customDesc}</div>
+                        `;
+                        btnAbility.onclick = () => playerTurn(nextScene, { type: 'ability', ability: ability });
+                    }
+                    actions.appendChild(btnAbility);
+                });
+            }
+
+            const btnUsePot = document.createElement('button');
+            if (gameState.potions > 0) {
+                btnUsePot.className = 'bg-emerald-800/80 hover:bg-emerald-700 p-3 sm:p-4 rounded-xl font-bold text-white border border-emerald-500 shadow-lg transition-all active:scale-95 flex flex-col justify-center items-center col-span-1 sm:col-span-2';
+                btnUsePot.innerHTML = `<div class="text-lg">🧪 飲用治療藥水 (恢復20點HP)</div><span id="combat-potion-count" class="text-xs font-normal opacity-80">剩餘數量: ${gameState.potions} 瓶 (消耗1回合行動)</span>`;
+                btnUsePot.onclick = () => usePotionInCombat(nextScene);
+            } else {
+                btnUsePot.className = 'bg-gray-800/80 p-3 sm:p-4 rounded-xl font-bold text-gray-500 cursor-not-allowed border border-gray-700 flex flex-col justify-center items-center col-span-1 sm:col-span-2';
+                btnUsePot.innerHTML = `<div class="text-lg">❌ 藥水已耗盡</div><span id="combat-potion-count" class="text-xs font-normal opacity-80">無可用儲備</span>`;
+                btnUsePot.disabled = true;
+            }
+            actions.appendChild(btnUsePot);
+
+            updateStats();
+        }
+
+        function playerTurn(nextScene, action) {
+            const actions = document.getElementById('action-panel');
+            actions.innerHTML = '<div class="col-span-1 sm:col-span-2 text-center text-rose-300 py-4 font-bold animate-pulse flex justify-center items-center h-full">⚔️ 雙方交鋒中...</div>';
+            
+            let enemyAlive = true;
+            
+            if (action.type === 'attack') {
+                enemyAlive = executeAttack(nextScene);
+            } else if (action.type === 'ability') {
+                enemyAlive = executeAbility(action.ability, nextScene);
+            }
+            
+            updateStats();
+            
+            if (gameState.player.hp <= 0) {
+                renderScene('gameOver');
+                return;
+            }
+
+            if (enemyAlive) {
+                const enemyCard = document.getElementById('enemy-combat-card');
+                if (enemyCard) {
+                    enemyCard.classList.remove('shake');
+                    void enemyCard.offsetWidth; 
+                    enemyCard.classList.add('shake');
+                }
+                
+                setTimeout(() => {
+                    enemyTurn(nextScene);
+                }, 1000); 
+            }
+        }
+
+        function executeAttack(nextScene) {
+            const enemy = gameState.currentEnemy;
+            const hitRoll = roll(20);
+            const atkBonus = gameState.player.currentAtkBonus;
+            
+            let finalRoll = hitRoll;
+            if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
+                 finalRoll = Math.max(hitRoll, roll(20));
+            }
+            
+            const hitTotal = finalRoll + atkBonus;
+            let targetAC = enemy.ac;
+            if (gameState.combatState.enemyProneTurns > 0) targetAC -= 4;
+            
+            if (hitTotal >= targetAC || hitRoll === 20) {
+                const critThreshold = getCritThreshold();
+                let isCrit = (hitRoll >= critThreshold);
+                if (isCrit && enemy.isArmorMan) {
+                    isCrit = false;
+                    log(`🛡️ [不朽血脈] 鎧甲男子戴著不朽角盔，周身邪火大盛，【免疫】了重擊的加倍傷害！(此次攻擊僅造成普通傷害)`, 'text-sky-400 font-bold');
+                }
+                let dmg = roll(gameState.player.baseDmgDie) + gameState.player.baseDmgBonus + gameState.player.currentDmgBonus;
+                if (isCrit) dmg *= 2;
+                
+                enemy.hp -= dmg;
+                playSynthSound('hit');
+                if (isCrit) {
+                     log("致命一擊！(投出 " + hitRoll + " >= 門檻 " + critThreshold + ") 造成 " + dmg + " 點物理傷害！", 'text-amber-400 font-bold');
+                } else {
+                     log("物理攻擊命中 (總和 " + hitTotal + ")，造成 " + dmg + " 點傷害。", 'text-emerald-300');
+                }
+            } else {
+                log("攻擊未命中 (投出 " + finalRoll + "+" + atkBonus + "=" + hitTotal + " < 目標AC " + targetAC + ")。", 'text-gray-400');
+            }
+            
+            return checkCombatEnd(nextScene);
+        }
+
+        function executeAbility(ability, nextScene) {
+            if (ability.cost !== 'inf' && ability.cost <= 0) return true;
+            if (ability.cost !== 'inf') ability.cost--;
+
+            const enemy = gameState.currentEnemy;
+            const player = gameState.player;
+            playSynthSound('spell');
+            
+            const spellDC = 10 + player.spellBonus;
+
+            if (ability.id === 'divine_smite') {
+                let hitRoll = roll(20);
+                if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
+                    hitRoll = Math.max(hitRoll, roll(20));
+                }
+                const hitTotal = hitRoll + player.currentAtkBonus;
+                if (hitTotal >= enemy.ac || hitRoll === 20) {
+                     const critThreshold = getCritThreshold();
+                     let isCrit = (hitRoll >= critThreshold);
+                     if (isCrit && enemy.isArmorMan) {
+                         isCrit = false;
+                         log(`🛡️ [不朽血脈] 鎧甲男子【免疫】了重擊的加倍效果！(神聖重擊僅造成普通傷害)`, 'text-sky-400 font-bold');
+                     }
+                     let physDmg = roll(player.baseDmgDie) + player.baseDmgBonus + player.currentDmgBonus;
+                     if(isCrit) physDmg *= 2;
+                     
+                     let smiteDmg = 6;
+                     let totalDmg = physDmg + smiteDmg;
+                     
+                     const isTargetSpec = (enemy.type === 'undead' || enemy.type === 'aberration');
+                     if (isTargetSpec) {
+                         totalDmg *= 2; 
+                     }
+                     
+                     enemy.hp -= totalDmg;
+                     log("[神聖打擊] 命中！物理 " + physDmg + " + 神聖 " + smiteDmg + " = 總計 " + totalDmg + " 點傷害！" + (isTargetSpec ? ' 🎯 (對不死/異怪生物造成傷害翻倍!)' : ''), 'text-amber-300 font-bold');
+                } else {
+                     log("[神聖打擊] 攻擊未命中，神聖之力消散。", 'text-gray-400');
+                }
+            } 
+            else if (ability.id === 'hold_person') {
+                if (enemy.type === 'humanoid') {
+                    const isBoss = enemy.name.includes('BOSS');
+                    if (isBoss) {
+                        log("[人類定身術] ⛓️ 吟唱神聖定身律令！[" + enemy.name + "] 具有強大的頭目意志，試圖抵抗束縛...", 'text-indigo-300');
+                        let resistThreshold = enemy.isElvenArchmage ? 75 : 50;
+                        if (roll(100) <= resistThreshold) {
+                            log("[人類定身術] 🛡️ 抵抗成功！[" + enemy.name + "] 憑藉奧術氣場強行震散了定身能量！", 'text-orange-400 font-semibold');
+                        } else {
+                            gameState.combatState.enemyStunnedTurns = 5;
+                            log("[人類定身術] ✨ 成功！定身律令生效！頭目 [" + enemy.name + "] 身體僵鎖！陷入「震懾」狀態 (5回合)，無法行動且受攻擊時我方獲得判定優勢！", 'text-indigo-400 font-bold animate-pulse');
+                        }
+                    } else {
+                        gameState.combatState.enemyStunnedTurns = 5;
+                        log("[人類定身術] ✨ 成功！定身律令直接生效！[" + enemy.name + "] 身體瞬間僵縮！陷入「震懾」狀態 (5回合)，無法行動且受攻擊時我方獲得判定優勢！", 'text-indigo-400 font-bold animate-pulse');
+                    }
+                } else {
+                    log("[人類定身術] ❌ 失敗：定身律令僅對類人生物 (humanoid) 有效，[" + enemy.name + "] (" + enemy.type + ") 完全免疫此奧法！", 'text-gray-400');
+                }
+            }
+            else if (ability.id === 'sunburst') {
+                let baseDmg = roll(6) + roll(6) + roll(6) + roll(6) + roll(6) + roll(6) + player.spellBonus;
+                const isTargetSpec = (enemy.type === 'undead' || enemy.type === 'aberration');
+                if (isTargetSpec) {
+                    baseDmg *= 2; 
+                }
+                enemy.hp -= baseDmg;
+                gameState.combatState.enemyBlindTurns = 2 + roll(6);
+                
+                log("[陽炎爆] ☀️ 烈陽破曉！萬道璀璨金芒爆散！對 [" + enemy.name + "] 造成 " + baseDmg + " 點神聖傷害" + (isTargetSpec ? ' 🎯 (對不死/異怪生物造成雙倍毀滅傷害!)' : ''), 'text-yellow-400 font-bold text-lg animate-pulse');
+            }
+            else if (ability.id === 'call_lightning') {
+                const activeFlying = enemy.isFlying && !(gameState.combatState.fatigueTurns > 0);
+                const isLightningWeak = !!enemy.lightningWeak;
+                let dmg = roll(6) + roll(6) + player.spellBonus;
+                
+                if (activeFlying || isLightningWeak) {
+                    dmg *= 2;
+                    enemy.hp -= dmg;
+                    let reason = activeFlying ? "浮空飛行" : "潮濕導電";
+                    log(`[落雷術] ⚡⚡ 狂雷擊頂！天雷直擊${reason}的 [${enemy.name}]，引發雙倍導電傷害！共造成 ${dmg} 點閃電傷害！${player.spellBonus > 0 ? " (含裝備共鳴加成)" : ""}`, 'text-yellow-300 font-black animate-pulse text-lg');
+                } else {
+                    enemy.hp -= dmg;
+                    log(`[落雷術] ⚡ 召喚天雷直擊！對 [${enemy.name}] 造成 ${dmg} 點閃電傷害！${player.spellBonus > 0 ? " (受裝備魔法能量共鳴加成 +" + player.spellBonus + " 點傷害!)" : ""}`, 'text-sky-300 font-bold animate-pulse');
+                }
+            }
+            else if (ability.id === 'fireball') {
+                if (enemy.fireImmune) {
+                    log("[火球術] 对 [" + enemy.name + "] 释放！但是对手具有火系免疫特性，造成 0 點傷害！", 'text-rose-400 font-bold');
+                } else {
+                    const isPlantOrWeak = enemy.type === 'plant' || enemy.fireWeak;
+                    let dmg = (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus);
+                    if (isPlantOrWeak) {
+                        dmg *= 2;
+                        enemy.hp -= dmg;
+                        log("[火球術] 🔥 烈焰爆發！對具有怕火/冰雪特性的生物 [" + enemy.name + "] 造成雙倍燃燒傷害！共計 " + dmg + " 點火焰傷害！", 'text-orange-500 font-bold text-lg animate-pulse');
+                    } else {
+                        enemy.hp -= dmg;
+                        log("[火球術] 爆發！造成 " + dmg + " 點火焰傷害！", 'text-orange-400 font-bold');
+                    }
+                }
+            } else if (ability.id === 'fireball_sorcerer') {
+                if (enemy.fireImmune) {
+                    log("[強效火球術] 对 [" + enemy.name + "] 释放！但是对手具有火系免疫特性，造成 0 點傷害！", 'text-rose-400 font-bold');
+                } else {
+                    const isPlantOrWeak = enemy.type === 'plant' || enemy.fireWeak;
+                    let dmg = (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus);
+                    if (isPlantOrWeak) {
+                        dmg *= 2;
+                        enemy.hp -= dmg;
+                        log("[強效火球術] 🔥🔥 劇烈爆發！對具有怕火/冰雪特性的生物 [" + enemy.name + "] 造成雙倍燃燒傷害！共計 " + dmg + " 點火焰傷害！", 'text-orange-500 font-bold text-lg animate-pulse');
+                    } else {
+                        enemy.hp -= dmg;
+                        log("[強效火球術] 劇烈爆發！造成 " + dmg + " 點火焰傷害！", 'text-orange-500 font-bold text-lg');
+                    }
+                }
+            } else if (ability.id === 'blizzard') {
+                const isFireOrColdWeak = enemy.fireImmune || enemy.coldWeak || enemy.name.includes('炎魔') || enemy.name.includes('雙頭犬') || enemy.name.includes('巨龍') || enemy.name.includes('紅龍') || enemy.type === 'dragon';
+                let dmg = (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus);
+                if (enemy.coldImmune) {
+                    log("[雪風暴] ❄️ 對冰霜免疫的生物 [" + enemy.name + "] 無效！造成 0 點傷害！", 'text-cyan-600 font-bold');
+                } else if (isFireOrColdWeak) {
+                    dmg *= 2;
+                    enemy.hp -= dmg;
+                    log("[雪風暴] ❄️ 狂風暴雪席捲！對怕冰/極熱特性生物 [" + enemy.name + "] 造成雙倍極寒凍結傷害！共計 " + dmg + " 點冰霜傷害！", 'text-cyan-400 font-bold text-lg animate-pulse');
+                } else {
+                    enemy.hp -= dmg;
+                    log("[雪風暴] ❄️ 暴雪降臨！造成 " + dmg + " 點冰霜傷害！", 'text-cyan-300 font-bold');
+                }
+            } 
+            else if (ability.id === 'fatigue_wave') {
+                if (enemy.type === 'undead') {
+                    log("[力竭波] 對沒有血肉的不死生物 [" + enemy.name + "] 無效！", 'text-gray-400');
+                } else {
+                    const duration = roll(6) + 2; 
+                    gameState.combatState.fatigueTurns = duration;
+                    log("[力竭波] 🌀 綠色衰弱光波席捲！[" + enemy.name + "] 全身肌肉脫力！其命中與傷害降低 3 點 (持續 " + duration + " 回合)。", 'text-sky-300 font-bold animate-pulse');
+
+                    if (enemy.isFlying) {
+                        const isGiant = (enemy.type === 'giant' || enemy.type === 'dragon' || enemy.type === 'monstrosity' || enemy.name.includes('巨人') || enemy.name.includes('巨怪') || enemy.name.includes('巨龍') || enemy.name.includes('紅龍') || enemy.name.includes('九頭蛇') || enemy.name.includes('炎魔') || enemy.name.includes('吞噬獸') || enemy.name.includes('眼魔') || enemy.name.includes('親王')) && !enemy.name.includes('奪心魔');
+                        let fallDmg = 0;
+                        if (isGiant) {
+                            fallDmg = roll(6) + roll(6) + roll(6) + roll(6) + roll(6); 
+                            log("[墜落] 🌀 [" + enemy.name + "] 忽然脫力，重墜地面！造成 " + fallDmg + " 點墜落傷害！", 'text-rose-400 font-bold text-lg animate-pulse');
+                        } else {
+                            fallDmg = roll(6) + roll(6) + roll(6); 
+                            log("[墜落] 🌀 [" + enemy.name + "] 失去飛行能力摔在地上，受到 " + fallDmg + " 點墜落傷害！", 'text-rose-300 font-bold');
+                        }
+                        enemy.hp -= fallDmg;
+                    }
+                }
+            } else if (ability.id === 'magic_missile') {
+                const dmg = roll(3) + roll(3) + roll(3) + (player.spellBonus * 3); 
+                enemy.hp -= dmg;
+                log("[魔法飛彈] 3發全數命中！共造成 " + dmg + " 點奧術傷害！", 'text-sky-300 font-bold');
+            } else if (ability.id === 'magic_missile_sorcerer') {
+                const dmg = roll(3) + roll(3) + roll(3) + roll(3) + (player.spellBonus * 4);
+                enemy.hp -= dmg;
+                log("[強效魔法飛彈] 4發狂風驟雨般命中！共造成 " + dmg + " 點奧術傷害！", 'text-sky-400 font-bold text-lg');
+            } 
+            else if (ability.id === 'grease') {
+                const activeFlying = enemy.isFlying && !(gameState.combatState.fatigueTurns > 0);
+                if (activeFlying) {
+                    log("[油膩術] 敵人是飛行生物，不受地面油膩影響！", 'text-gray-400');
+                } else {
+                    let successChance = (enemy.legs > 2) ? 30 : 60; 
+                    
+                    const currentSpellBonus = player.spellBonus || 0;
+                    const bonusPercent = currentSpellBonus * 10;
+                    successChance += bonusPercent;
+                    successChance = Math.min(95, successChance); 
+
+                    if (enemy.isElvenArchmage) {
+                        successChance = Math.floor(successChance / 2);
+                    }
+
+                    let bonusLog = "";
+                    if (currentSpellBonus > 0) {
+                        const activeGears = [];
+                        if (gameState.gear.weapon && gameState.gear.weapon.id === 'staff_p1') activeGears.push("魔力法杖+1");
+                        if (gameState.gear.amulet && gameState.gear.amulet.id === 'caster_amulet') activeGears.push("星空護身符");
+                        bonusLog = " (受【" + activeGears.join('與') + "】共鳴加值：+" + bonusPercent + "% 成功率)";
+                    }
+                    if (enemy.isElvenArchmage) {
+                        bonusLog += " [傳奇大法師魔抗：成功率減半]";
+                    }
+
+                    log("[油膩術] 🧪 潑灑滑溜油脂！(基礎率: " + ((enemy.legs > 2)? '30% (多足)' : '60%') + bonusLog + " = 總成功率 " + successChance + "%)", 'text-indigo-300');
+                    if (roll(100) <= successChance) {
+                        gameState.combatState.enemyProneTurns = 2 + roll(6);
+                        log("[油膩術] 🧼 成功！[" + enemy.name + "] 腳下一滑阻倒在地！接下來 " + gameState.combatState.enemyProneTurns + " 回合【無法行動】，且遭到物理攻擊時防禦AC降低 4！", 'text-emerald-300 font-bold');
+                    } else {
+                        log("[油膩術] 🛡️ [" + enemy.name + "] 步伐敏捷，成功保持平衡，避開了油脂。", 'text-gray-400');
+                    }
+                }
+            } 
+            else if (ability.id === 'blind') {
+                gameState.combatState.enemyBlindTurns = 2 + roll(6);
+                log("[目盲術] 👁️ 強光爆發！[" + enemy.name + "] 雙眼被奪去光明！陷入目盲狀態 " + gameState.combatState.enemyBlindTurns + " 回合，其攻擊判定一律雙骰取低 (劣勢)！", 'text-amber-200 font-bold animate-pulse');
+            } else if (ability.id === 'stoneskin') {
+                gameState.combatState.stoneskinTurns = 10;
+                log("[石膚術] 🧱 鑽石與岩石之力覆蓋全身！接下來 10 回合受到的所有傷害減半！", 'text-sky-300 font-bold');
+            } 
+            else if (ability.id === 'barkskin') {
+                gameState.combatState.barkskinTurns = 10;
+                log("[樹膚術] 🌿 古樹之皮在周身角質化！接下來 10 回合防禦 (AC) 提升 4 點，遭受到火焰怪物傷害時變為 1.5 倍！", 'text-emerald-300 font-bold');
+                updateStats();
+            }
+            else if (ability.id === 'heal') {
+                const healAmt = 15 + player.spellBonus;
+                player.hp = Math.min(player.maxHp, player.hp + healAmt);
+                playSynthSound('heal');
+                log("[治療術] 聖光閃耀，恢復了 " + healAmt + " 點 HP。", 'text-emerald-400 font-bold');
+                updateStats();
+            } 
+            else if (ability.id === 'heavy_strike') {
+                 let hitRoll = roll(20);
+                 if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
+                     hitRoll = Math.max(hitRoll, roll(20));
+                 }
+                 const hitTotal = hitRoll + player.currentAtkBonus - 3; 
+                 let targetAC = enemy.ac;
+                 if (gameState.combatState.enemyProneTurns > 0) targetAC -= 4;
+                 
+                 if (hitTotal >= targetAC || hitRoll === 20) {
+                     const critThreshold = getCritThreshold();
+                     let isCrit = (hitRoll >= critThreshold);
+                     if (isCrit && enemy.isArmorMan) {
+                         isCrit = false;
+                         log(`🛡️ [不朽血脈] 鎧甲男子【免疫】了重擊的加倍效果！(猛力重擊僅造成普通傷害)`, 'text-sky-400 font-bold');
+                     }
+                     let baseDmg = roll(player.baseDmgDie) + player.baseDmgBonus + player.currentDmgBonus;
+                     let extraDmg = 8;
+                     if (isCrit) {
+                         baseDmg *= 2;
+                         extraDmg *= 2;
+                     }
+                     const totalDmg = baseDmg + extraDmg;
+                     enemy.hp -= totalDmg;
+                     if (isCrit) {
+                         log("[猛力攻擊] 💥 重擊！狠狠砸中！造成 " + totalDmg + " 點物理傷害！", 'text-rose-400 font-bold text-lg');
+                     } else {
+                         log("[猛力攻擊] 💥 成功砸中！造成普攻加上額外 8 點傷害，共 " + totalDmg + " 點物理傷害。", 'text-rose-300 font-bold');
+                     }
+                 } else {
+                     log("[猛力攻擊] 動作太大，揮空了！(命中檢定 " + hitTotal + " < AC " + targetAC + "，含 -3 命中懲罰)", 'text-gray-400');
+                 }
+            } else if (ability.id === 'intimidate') {
+                 if (enemy.type === 'undead' || enemy.type === 'construct') {
+                     log("[威壓打擊] 對沒有情感的生物無效！", 'text-gray-400');
+                 } else {
+                     let hitRoll = Math.min(roll(20), roll(20));
+                     if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
+                         hitRoll = roll(20); 
+                     }
+                     if (hitRoll + player.currentAtkBonus >= enemy.ac) {
+                         const dmg = roll(player.baseDmgDie) + player.baseDmgBonus + player.currentDmgBonus;
+                         enemy.hp -= dmg;
+                         gameState.combatState.enemyIntimidatedTurns = 2;
+                         log("[威壓打擊] 💥 命中造成 " + dmg + " 傷害。敵人受到驚嚇，下 2 回合內攻擊均受劣勢！", 'text-amber-300');
+                     } else {
+                         gameState.combatState.enemyIntimidatedTurns = 2;
+                         log("[威壓打擊] 未能擊中，但強大的氣勢仍讓敵人受到驚嚇，下 2 回合內攻擊均受劣勢！", 'text-gray-400');
+                     }
+                 }
+            } else if (ability.id === 'brutal_strike') {
+                 gameState.combatState.barbarianReckless = true;
+                 const hitRoll = Math.max(roll(20), roll(20));
+                 if (hitRoll + player.currentAtkBonus >= enemy.ac || hitRoll === 20) {
+                     const critThreshold = getCritThreshold();
+                     const isCrit = (hitRoll >= critThreshold);
+                     let dmg = roll(player.baseDmgDie) + player.baseDmgBonus + player.currentDmgBonus;
+                     if(isCrit) dmg *= 2;
+                     enemy.hp -= dmg;
+                     log("[兇蠻打擊] 狂野命中！造成 " + dmg + " 點傷害！但自身露出破綻。", 'text-rose-400 font-bold');
+                 } else {
+                     log("[兇蠻打擊] 用力過猛揮空了！自身露出破綻。", 'text-gray-400');
+                 }
+            } else if (ability.id === 'rage') {
+                 gameState.combatState.rageTurns = 10;
+                 log("[狂暴] 怒火中燒！命中與傷害+2，AC-2。", 'text-rose-500 font-bold');
+                 updateStats();
+                 const isAlive = checkCombatEnd(nextScene);
+                 if(isAlive) renderCombat(nextScene);
+                 return false; 
+            } 
+            else if (ability.id === 'backstab') {
+                 let hitRoll = roll(20);
+                 if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
+                     hitRoll = Math.max(hitRoll, roll(20));
+                 }
+                 const hitTotal = hitRoll + player.currentAtkBonus;
+                 if (hitTotal >= enemy.ac) {
+                     const wId = gameState.gear.weapon ? gameState.gear.weapon.id : '';
+                     let multiplier = 3;
+                     let weaponName = "普通武器";
+                     
+                     if (wId === 'longsword_p1') {
+                         multiplier = 4;
+                         weaponName = "鋒銳長劍+1";
+                     } else if (wId === 'scimitar_p1') {
+                         multiplier = 4;
+                         weaponName = "秘銀彎刀+1";
+                     } else if (wId === 'shortsword_p1') {
+                         multiplier = 6;
+                         weaponName = "短劍+1";
+                     } else if (wId === 'jutte_p1') {
+                         multiplier = 5;
+                         weaponName = "精金十手+1";
+                     } else if (wId) {
+                         weaponName = gameState.gear.weapon.name;
+                     }
+
+                     const critThreshold = getCritThreshold();
+                     let isCrit = (hitRoll >= critThreshold);
+                     if (isCrit && enemy.isArmorMan) {
+                         isCrit = false;
+                         log(`🛡️ [不朽血脈] 鎧甲男子【免疫】了重擊的加倍效果！(背刺僅造成正常背刺倍率傷害)`, 'text-sky-400 font-bold');
+                     }
+                     let baseDmg = roll(player.baseDmgDie) + player.baseDmgBonus + player.currentDmgBonus;
+                     if (isCrit) {
+                         baseDmg *= 2; 
+                     }
+                     const dmg = baseDmg * multiplier;
+                     
+                     enemy.hp -= dmg;
+                     if (isCrit) {
+                         log("[背刺] 🎯 重擊！(投出 " + hitRoll + " >= 門檻 " + critThreshold + ") 搭配【" + weaponName + "】突破破綻！爆發高達 " + multiplier + " 倍物理傷害，造成驚人的 " + dmg + " 點物理傷害！", 'text-fuchsia-400 font-black text-xl animate-pulse');
+                     } else {
+                         log("[背刺] 🎯 搭配【" + weaponName + "】發動！造成 " + multiplier + " 倍背刺傷害，共計 " + dmg + " 點物理傷害。", 'text-fuchsia-300 font-bold text-lg');
+                     }
+                 } else {
+                     log("[背刺] 錯失良機，攻擊被躲開了。", 'text-gray-400');
+                 }
+                 gameState.combatState.backstabCooldown = 3;
+            } else if (ability.id === 'throw_sand') {
+                 let hitRoll = roll(20);
+                 if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
+                     hitRoll = Math.max(hitRoll, roll(20));
+                 }
+                 const hitTotal = hitRoll + player.currentAtkBonus - 2;
+                 if (hitTotal >= enemy.ac) { 
+                     gameState.combatState.enemyBlindTurns = 2 + roll(6);
+                     log("[拋沙] 成功命中！沙子飛入敵人的眼睛，接下來 " + gameState.combatState.enemyBlindTurns + " 回合陷入目盲狀態。", 'text-amber-300 font-bold');
+                 } else {
+                     log("[拋沙] 敵人偏頭躲過了沙子，未受影響。", 'text-gray-400');
+                 }
+            }
+            else if (ability.id === 'poison_dart') {
+                 const immuneTypes = ['undead', 'fiend', 'plant', 'elemental', 'construct'];
+                 const isImmune = immuneTypes.includes(enemy.type) || enemy.name.includes('元素') || enemy.name.includes('樹人') || enemy.name.includes('雙頭犬') || enemy.name.includes('炎魔') || enemy.name.includes('骷髏') || enemy.name.includes('幽魂') || enemy.name.includes('巫妖') || enemy.name.includes('大師') || enemy.name.includes('蕈怪');
+                 
+                 if (isImmune) {
+                     log("[毒鏢] 🎯 你甩出毒鏢射向 [" + enemy.name + "]！但該目標免疫毒素特性，未能滲透任何劇毒！造成 0 點傷害。", 'text-slate-500 italic');
+                 } else {
+                     let hitRoll = roll(20);
+                     if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
+                         hitRoll = Math.max(hitRoll, roll(20));
+                     }
+                     const hitTotal = hitRoll + player.currentAtkBonus;
+                     let targetAC = enemy.ac;
+                     if (gameState.combatState.enemyProneTurns > 0) targetAC -= 4;
+
+                     if (hitTotal >= targetAC || hitRoll === 20) {
+                         const critThreshold = getCritThreshold();
+                         let isCrit = (hitRoll >= critThreshold);
+                         if (isCrit && enemy.isArmorMan) {
+                             isCrit = false;
+                             log(`🛡️ [不朽血脈] 鎧甲男子【免疫】了重擊的加倍效果！(毒鏢僅造成普通傷害)`, 'text-sky-400 font-bold');
+                         }
+                         let dmg = roll(6) + roll(6) + 1; 
+                         if (isCrit) dmg *= 2;
+                         
+                         enemy.hp -= dmg;
+                         playSynthSound('hit');
+                         if (isCrit) {
+                             log("[毒鏢] 🎯 致命一擊！(投出 " + hitRoll + " >= 門檻 " + critThreshold + ") 毒素瞬間滲入血管，對 [" + enemy.name + "] 爆發 " + dmg + " 點致命毒素傷害！", 'text-emerald-400 font-bold text-lg animate-pulse');
+                         } else {
+                             log("[毒鏢] 🎯 命中！毒液隨血液在 [" + enemy.name + "] 體內擴散，造成 " + dmg + " 點毒素傷害。", 'text-emerald-300 font-semibold');
+                         }
+
+                         const enemyConSave = roll(20);
+                         log("[毒素豁免] 🧪 劇毒在 [" + enemy.name + "] 體內激發！敵人正在進行體質豁免檢定 (難度加值後 DC: " + spellDC + ")...", 'text-indigo-300');
+                         if (enemyConSave >= spellDC) {
+                             log("[毒素豁免] 🛡️ [" + enemyConSave + " 成功抵抗毒素 (豁免骰 " + enemyConSave + " >= DC " + spellDC + ")！", 'text-gray-400');
+                         } else {
+                             gameState.combatState.enemyPoisonedTurns = 3;
+                             log("[毒素豁免] 🤢 豁免失敗 (豁免骰 " + enemyConSave + " < DC " + spellDC + ")！[" + enemy.name + "] 臉色發青，陷入「中毒」狀態 (持續 3 回合)！期間【命中-1、造成的傷害-1】！", 'text-emerald-400 font-bold animate-pulse');
+                         }
+                     } else {
+                         log("[毒鏢] 💨 投擲偏出！(命中檢定 " + hitTotal + " < AC " + targetAC + ")", 'text-gray-400');
+                     }
+                 }
+            }
+            else if (ability.id === 'sneak_attack') {
+                 const hitRoll = Math.max(roll(20), roll(20));
+                 const hitTotal = hitRoll + player.currentAtkBonus;
+                 let targetAC = enemy.ac;
+                 if (gameState.combatState.enemyProneTurns > 0) targetAC -= 4;
+                 
+                 if (hitTotal >= targetAC || hitRoll === 20) {
+                     const critThreshold = getCritThreshold();
+                     let isCrit = (hitRoll >= critThreshold); 
+                     if (isCrit && enemy.isArmorMan) {
+                         isCrit = false;
+                         log(`🛡️ [不朽血脈] 鎧甲男子【免疫】了重擊的加倍效果！(偷襲僅造成普通加成傷害)`, 'text-sky-400 font-bold');
+                     }
+                     let baseDmg = roll(player.baseDmgDie) + player.baseDmgBonus + player.currentDmgBonus;
+                     let sneakDmg = roll(6); 
+                     if(isCrit) { baseDmg *= 2; sneakDmg *= 2; } 
+                     const totalDmg = baseDmg + sneakDmg;
+                     
+                     enemy.hp -= totalDmg;
+                     if (isCrit) {
+                         log("[偷襲] 重擊！精準刺入破綻！造成 " + baseDmg + " 物理 + " + sneakDmg + " 偷襲 = 總計 " + totalDmg + " 點傷害！", 'text-fuchsia-400 font-bold text-lg');
+                     } else {
+                         log("[偷襲] 命中目盲的敵人！造成 " + baseDmg + " 物理 + " + sneakDmg + " 偷襲 = 總計 " + totalDmg + " 點傷害。", 'text-fuchsia-300 font-bold');
+                     }
+                 } else {
+                     log("[偷襲] 雖然敵人目盲，但你的攻擊還是意外落空了。", 'text-gray-400');
+                 }
+            } 
+            else if (ability.id === 'turn_undead') {
+                 if (enemy.type === 'undead') {
+                     const check = roll(20);
+                     if (check > 8) {
+                         const isBoss = enemy.name.includes('BOSS');
+                         if (isBoss && Math.random() < 0.5) {
+                             const dmg = 30 + player.spellBonus;
+                             enemy.hp -= dmg;
+                             log("[驅散死靈] 聖光爆發 (檢定 " + check + " > 8)！但 [" + enemy.name + "] 具有強大且邪惡的頭目意志，【抵抗】了淨化秒殺效果，僅受到 " + dmg + " 點淨化傷害！", 'text-amber-400 font-bold');
+                         } else {
+                             enemy.hp = 0;
+                             log("[驅散死靈] 聖光爆發 (檢定 " + check + " > 8)！不死生物瞬間化為灰燼！", 'text-amber-400 font-bold text-lg');
+                         }
+                     } else {
+                         const backfireDmg = roll(6) + roll(6) + roll(6);
+                         enemy.hp -= backfireDmg;
+                         log("[驅散死靈] 聖光微弱 (檢定 " + check + " <= 8)，未能直接驅散！但溢出的純淨聖光仍對 [" + enemy.name + "] 造成了 " + backfireDmg + " 點神聖反噬傷害！", 'text-rose-400 font-semibold');
+                     }
+                 } else {
+                     log("[驅散死靈] 對非不死生物沒有效果。", 'text-gray-400');
+                 }
+            }
+            else if (ability.id === 'stun_strike') {
+                const hitRoll = roll(20);
+                let finalRoll = hitRoll;
+                if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
+                    finalRoll = Math.max(hitRoll, roll(20));
+                }
+                const hitTotal = finalRoll + player.currentAtkBonus - 3;
+                let targetAC = enemy.ac;
+                if (gameState.combatState.enemyProneTurns > 0) targetAC -= 4;
+
+                if (hitTotal >= targetAC || hitRoll === 20) {
+                    const critThreshold = getCritThreshold();
+                    let isCrit = (hitRoll >= critThreshold);
+                    if (isCrit && enemy.isArmorMan) {
+                         isCrit = false;
+                         log(`🛡️ [不朽血脈] 鎧甲男子【免疫】了重擊的加倍效果！(震懾擊僅造成普通傷害)`, 'text-sky-400 font-bold');
+                    }
+                    let dmg = roll(player.baseDmgDie) + player.baseDmgBonus + player.currentDmgBonus;
+                    if (isCrit) dmg *= 2;
+                    enemy.hp -= dmg;
+                    
+                    const isGiant = (enemy.type === 'giant' || enemy.type === 'dragon' || enemy.type === 'monstrosity' || enemy.name.includes('巨人') || enemy.name.includes('巨怪') || enemy.name.includes('巨龍') || enemy.name.includes('紅龍') || enemy.name.includes('九頭蛇') || enemy.name.includes('炎魔') || enemy.name.includes('吞噬獸') || enemy.name.includes('眼魔') || enemy.name.includes('梟熊') || enemy.name.includes('男爵') || enemy.name.includes('親王')) && !enemy.name.includes('奪心魔');
+                    
+                    if (enemy.isElvenArchmage && roll(100) <= 50) {
+                        log("[震懾拳] 成功擊中！造成 " + dmg + " 點物理傷害" + (isCrit ? ' (重擊!)' : '') + "，但 [精靈傳奇大法師] 憑藉極境奧法抗性，【免疫】了物理震懾控制！", 'text-orange-400 font-semibold');
+                    } else if (isGiant && Math.random() < 0.5) {
+                        log("[震懾拳] 成功擊中！造成 " + dmg + " 點物理傷害" + (isCrit ? ' (重擊!)' : '') + "，但對手 [" + enemy.name + "] 具有巨型特徵，【免疫】了震懾控制效果！", 'text-amber-500 font-semibold');
+                    } else {
+                        gameState.combatState.enemyStunnedTurns = 5; 
+                        log("[震懾拳] 成功擊中！造成 " + dmg + " 點物理傷害" + (isCrit ? ' (重擊!)' : '') + "，並使對手陷入【震懾】狀態 (5回合)！", 'text-amber-400 font-bold');
+                    }
+                } else {
+                    log("[震懾拳] 攻擊未命中 (總和 " + hitTotal + " < AC " + targetAC + ")，震懾之力未入體。", 'text-gray-400');
+                }
+            } 
+            else if (ability.id === 'flurry') {
+                const hasWeapon = !!gameState.gear.weapon;
+                const totalAttacks = hasWeapon ? 3 : 2;
+                log("[疾風連擊] 武僧雙拳與兵刃如雷霆般爆發，狂暴揮出 " + totalAttacks + " 連擊！" + (hasWeapon ? `(手持【${gameState.gear.weapon.name}】追加第三次武器打擊！)` : ''), 'text-amber-300 font-bold');
+                
+                const critThreshold = getCritThreshold();
+                let targetAC = enemy.ac;
+                if (gameState.combatState.enemyProneTurns > 0) targetAC -= 4;
+
+                for (let i = 1; i <= totalAttacks; i++) {
+                    if (enemy.hp <= 0) break;
+
+                    let hit = roll(20);
+                    if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
+                        hit = Math.max(hit, roll(20));
+                    }
+                    let hitTotal = hit + player.currentAtkBonus;
+
+                    if (hitTotal >= targetAC || hit === 20) {
+                        let isCrit = (hit >= critThreshold);
+                        if (isCrit && enemy.isArmorMan) {
+                            isCrit = false;
+                            log(`🛡️ [不朽血脈] 鎧甲男子【免疫】了重擊的加倍效果！(此次連擊僅造成普通傷害)`, 'text-sky-400 font-bold');
+                        }
+                        let dmg = roll(player.baseDmgDie) + player.baseDmgBonus + player.currentDmgBonus;
+                        if (isCrit) {
+                            dmg *= 2; 
+                        }
+                        enemy.hp -= dmg;
+                        
+                        if (isCrit) {
+                            log("👊 疾風連擊 (第 " + i + " 擊)：💥 重擊！(投出 " + hit + " >= 門檻 " + critThreshold + ") 造成雙倍傷害 " + dmg + " 點物理傷害！", 'text-amber-400 font-bold animate-pulse');
+                        } else {
+                            log("👊 疾風連擊 (第 " + i + " 擊)：命中！造成 " + dmg + " 點物理傷害。", 'text-green-300');
+                        }
+                    } else {
+                        log("👊 疾風連擊 (第 " + i + " 擊)：未擊中。", 'text-gray-400');
+                    }
+                }
+            } 
+            else if (ability.id === 'sweep') {
+                let hitRoll = roll(20);
+                if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
+                    hitRoll = Math.max(hitRoll, roll(20));
+                }
+                
+                let sweepPenalty = 5;
+                const hasShield = !!gameState.gear.shield;
+                const hasStaff = gameState.gear.weapon && gameState.gear.weapon.id === 'staff_p1';
+                if (hasShield || hasStaff) {
+                    sweepPenalty = 2;
+                }
+
+                const hitTotal = hitRoll + player.currentAtkBonus - sweepPenalty;
+                let targetAC = enemy.ac;
+                if (gameState.combatState.enemyProneTurns > 0) targetAC -= 4;
+
+                if (hitTotal >= targetAC || hitRoll === 20) {
+                    const critThreshold = getCritThreshold();
+                    let isCrit = (hitRoll >= critThreshold);
+                    if (isCrit && enemy.isArmorMan) {
+                        isCrit = false;
+                        log(`🛡️ [不朽血脈] 鎧甲男子【免疫】了重擊的加倍效果！(掃倒僅造成普通傷害)`, 'text-sky-400 font-bold');
+                    }
+                    let dmg = roll(player.baseDmgDie) + player.baseDmgBonus + player.currentDmgBonus;
+                    if (isCrit) dmg *= 2;
+                    enemy.hp -= dmg;
+                    log("[掃倒] 擊中目標！" + ((hasShield || hasStaff) ? ' (發揮借力優勢，減少命中懲罰!)' : '') + " 造成 " + dmg + " 點物理傷害" + (isCrit ? ' (重擊!)' : '') + "。", 'text-green-300');
+
+                    const activeFlying = enemy.isFlying && !(gameState.combatState.fatigueTurns > 0);
+                    if (enemy.isElvenArchmage && roll(100) <= 50) {
+                        log("💨 掃倒失敗：[精靈傳奇大法師] 憑藉極境反射與飄逸身法，【免疫】了物理掃倒效果！", 'text-orange-400 font-semibold');
+                    } else if (activeFlying) {
+                        log("💨 掃倒失敗：目標 [" + enemy.name + "] 具有飛行特性，不受掃倒跌落影響。", 'text-gray-400');
+                    } else if (enemy.legs === 0 && enemy.type === 'plant') {
+                        log("💨 掃倒失敗：目標 [" + enemy.name + "] 是植物且沒有腿，無法被掃倒。", 'text-gray-400');
+                    } else {
+                        const duration = 1 + roll(3); 
+                        gameState.combatState.enemyProneTurns = duration;
+                        log("🦵 掃倒成功！敵人重心不穩摔倒在地，接下來 " + duration + " 回合內【無法行動】，且遭到物理攻擊時防禦AC降低 4！", 'text-amber-400 font-bold');
+                    }
+                } else {
+                    log("[掃倒] 攻擊未命中 (總和 " + hitTotal + " < AC " + targetAC + ")。", 'text-gray-400');
+                }
+            } else if (ability.id === 'finger_of_death') {
+                const isUndead = (enemy.type === 'undead');
+                const baseDmg = roll(8) + roll(8) + roll(8) + roll(8) + roll(8) + roll(8) + roll(8) + 10;
+                const totalDmg = baseDmg + player.spellBonus;
+                if (isUndead) {
+                    enemy.hp += totalDmg;
+                    log("[死亡一指] ☠ 命中！你施展死靈射線指向不死生物 [" + enemy.name + "]，死靈之氣化為不淨生命，【治療】了對手 " + totalDmg + " 點生命值！", 'text-rose-400 font-bold text-lg');
+                } else {
+                    enemy.hp -= totalDmg;
+                    log("[死亡一指] 👉💀 陰冷死靈射線！對 [" + enemy.name + "] (" + enemy.type + ") 造成 " + totalDmg + " 點毀滅性死靈傷害！", 'text-purple-400 font-bold text-lg');
+                }
+            }
+
+            return checkCombatEnd(nextScene);
+        }
+
+        function enemyTurn(nextScene) {
+             const enemy = gameState.currentEnemy;
+             let isProne = gameState.combatState.enemyProneTurns > 0;
+             let isStunned = gameState.combatState.enemyStunnedTurns > 0;
+             
+             if (isProne || isStunned) {
+                 if (isStunned) {
+                     log("⚡ " + enemy.name + " 正處於【震懾】狀態，擺脫不了麻痺，本回合無法行動！(剩餘 " + gameState.combatState.enemyStunnedTurns + " 回合)", 'text-amber-400 font-bold');
+                 } else {
+                     log("👹 " + enemy.name + " 因為跌倒在地上，本回合無法行動！(剩餘 " + gameState.combatState.enemyProneTurns + " 回合)", 'text-amber-400 font-bold');
+                 }
+                 
+                 if(gameState.combatState.enemyProneTurns > 0) gameState.combatState.enemyProneTurns--;
+                 if(gameState.combatState.enemyStunnedTurns > 0) gameState.combatState.enemyStunnedTurns--;
+                 if(gameState.combatState.enemyBlindTurns > 0) gameState.combatState.enemyBlindTurns--;
+                 if(gameState.combatState.enemyPoisonedTurns > 0) gameState.combatState.enemyPoisonedTurns--; 
+                 if(gameState.combatState.rageTurns > 0) gameState.combatState.rageTurns--;
+                 if(gameState.combatState.stoneskinTurns > 0) gameState.combatState.stoneskinTurns--; 
+                 if(gameState.combatState.barkskinTurns > 0) gameState.combatState.barkskinTurns--; 
+                 if(gameState.combatState.enemyIntimidatedTurns > 0) gameState.combatState.enemyIntimidatedTurns--; 
+                 if(gameState.combatState.fatigueTurns > 0) gameState.combatState.fatigueTurns--; 
+                 if(gameState.combatState.backstabCooldown > 0) gameState.combatState.backstabCooldown--; 
+                 if(gameState.combatState.enemyStoneskinTurns > 0) gameState.combatState.enemyStoneskinTurns--; 
+                 if(gameState.combatState.playerFrozenTurns > 0) gameState.combatState.playerFrozenTurns--;
+                 
+                 updateStats();
+                 renderCombat(nextScene);
+                 return;
+             }
+
+             if (enemy.isDemilich && enemy.hp > 0 && enemy.hp < enemy.maxHp) {
+                  enemy.hp = Math.min(enemy.maxHp, enemy.hp + 2);
+                  log("💀 半神巫妖的死亡精華在湧動，其肉身（金色骨骼）自我修復恢復了 2 點 HP！", 'text-emerald-400 font-semibold');
+             }
+
+             if (enemy.isElderBrain) {
+                  if (!gameState.combatState.bossTurnCounter) {
+                      gameState.combatState.bossTurnCounter = 0;
+                  }
+                  gameState.combatState.bossTurnCounter++;
+                  
+                  if (gameState.combatState.bossTurnCounter % 4 === 0) {
+                      log("🧠 主腦爆發了劇烈的心靈波瀾，向你的大腦發射了一道致命的【超自然心靈震爆】！(每 4 回合固定施展一次)", 'text-purple-400 font-extrabold animate-pulse');
+                      
+                      const hitRoll = roll(20);
+                      const totalHit = hitRoll + (enemy.hitBonus || 0);
+                      const playerAC = gameState.player.currentAC;
+                      
+                      log("[心靈震爆命中判定] (主腦命中值: " + hitRoll + " + " + (enemy.hitBonus || 0) + " = " + totalHit + " vs 你的防禦值 AC: " + playerAC + ")", 'text-indigo-300');
+                      if (totalHit >= playerAC || hitRoll === 20) {
+                           playSynthSound('spell');
+                           gameState.combatState.playerStunnedTurns = 2; 
+                           const dmg = 9; 
+                           gameState.player.hp -= dmg;
+                           log("💥 擊中！心靈重擊撕裂了你的大腦防壁！你受到了 " + dmg + " 點心靈傷害，且陷入「震懾」狀態 2 回合（你將跳過下兩個行動回合）！", 'text-rose-500 font-extrabold animate-bounce');
+                      } else {
+                           log("🛡️ 驚險萬分！你冒出冷汗，憑藉超凡的心智格擋了這次心靈重壓！", 'text-emerald-400 font-bold');
+                      }
+                      
+                      if(gameState.combatState.enemyProneTurns > 0) gameState.combatState.enemyProneTurns--;
+                      if(gameState.combatState.enemyStunnedTurns > 0) gameState.combatState.enemyStunnedTurns--;
+                      if(gameState.combatState.enemyBlindTurns > 0) gameState.combatState.enemyBlindTurns--;
+                      if(gameState.combatState.enemyPoisonedTurns > 0) gameState.combatState.enemyPoisonedTurns--;
+                      if(gameState.combatState.rageTurns > 0) gameState.combatState.rageTurns--;
+                      if(gameState.combatState.stoneskinTurns > 0) gameState.combatState.stoneskinTurns--; 
+                      if(gameState.combatState.barkskinTurns > 0) gameState.combatState.barkskinTurns--; 
+                      if(gameState.combatState.enemyIntimidatedTurns > 0) gameState.combatState.enemyIntimidatedTurns--; 
+                      if(gameState.combatState.fatigueTurns > 0) gameState.combatState.fatigueTurns--; 
+                      if(gameState.combatState.backstabCooldown > 0) gameState.combatState.backstabCooldown--; 
+                      if(gameState.combatState.enemyStoneskinTurns > 0) gameState.combatState.enemyStoneskinTurns--;
+                      if(gameState.combatState.playerFrozenTurns > 0) gameState.combatState.playerFrozenTurns--;
+
+                      updateStats();
+                      if (gameState.player.hp <= 0) {
+                          renderScene('gameOver');
+                          return;
+                      }
+                      renderCombat(nextScene);
+                      return; 
+                  }
+             }
+
+             if (enemy.isPrimalOwlbear) {
+                  if (!gameState.combatState.bossTurnCounter) {
+                      gameState.combatState.bossTurnCounter = 0;
+                  }
+                  gameState.combatState.bossTurnCounter++;
+                  if (gameState.combatState.bossTurnCounter % 5 === 0) {
+                      log("🐻 巨型原初梟熊猛然展翅，揮動雙翼引導強烈狂風，對你發動【原初狂風掃倒】！(無視常規 AC 防禦)", 'text-amber-400 font-extrabold animate-pulse');
+                      const duration = roll(3); // 1D3 回合
+                      gameState.combatState.playerProneTurns = duration; 
+                      log("🧼 擊中！狂暴強風撕裂大地將你掃倒在地！接下來 " + duration + " 回合內你將【無法行動】，且 AC 防禦力下降 4 點！", 'text-rose-500 font-bold animate-bounce');
+                      
+                      if(gameState.combatState.enemyProneTurns > 0) gameState.combatState.enemyProneTurns--;
+                      if(gameState.combatState.enemyStunnedTurns > 0) gameState.combatState.enemyStunnedTurns--;
+                      if(gameState.combatState.enemyBlindTurns > 0) gameState.combatState.enemyBlindTurns--;
+                      if(gameState.combatState.enemyPoisonedTurns > 0) gameState.combatState.enemyPoisonedTurns--;
+                      if(gameState.combatState.rageTurns > 0) gameState.combatState.rageTurns--;
+                      if(gameState.combatState.stoneskinTurns > 0) gameState.combatState.stoneskinTurns--; 
+                      if(gameState.combatState.barkskinTurns > 0) gameState.combatState.barkskinTurns--; 
+                      if(gameState.combatState.enemyIntimidatedTurns > 0) gameState.combatState.enemyIntimidatedTurns--; 
+                      if(gameState.combatState.fatigueTurns > 0) gameState.combatState.fatigueTurns--; 
+                      if(gameState.combatState.backstabCooldown > 0) gameState.combatState.backstabCooldown--; 
+                      if(gameState.combatState.enemyStoneskinTurns > 0) gameState.combatState.enemyStoneskinTurns--;
+                      if(gameState.combatState.playerFrozenTurns > 0) gameState.combatState.playerFrozenTurns--;
+
+                      updateStats();
+                      if (gameState.player.hp <= 0) {
+                          renderScene('gameOver');
+                          return;
+                      }
+                      renderCombat(nextScene);
+                      return; 
+                  }
+             }
+
+             let enemyHitDebuff = 0;
+             let enemyDmgDebuff = 0;
+             if (gameState.combatState.fatigueTurns > 0) {
+                 enemyHitDebuff += 3;
+                 enemyDmgDebuff += 3;
+             }
+             if (gameState.combatState.enemyPoisonedTurns > 0) {
+                 enemyHitDebuff += 1;
+                 enemyDmgDebuff += 1;
+             }
+
+             if (enemy.name.includes('上古紅龍')) {
+                  if (!gameState.combatState.bossTurnCounter) {
+                      gameState.combatState.bossTurnCounter = 0;
+                  }
+                  gameState.combatState.bossTurnCounter++;
+                  
+                  if (gameState.combatState.bossTurnCounter % 4 === 0) {
+                      playSynthSound('spell');
+                      let dmg = 16 - enemyDmgDebuff; 
+                      if (dmg < 1) dmg = 1;
+                      
+                      let dexSaveBonus = 0;
+                      if (gameState.player.name === '盜賊' || gameState.player.name === '武僧') dexSaveBonus = 5;
+                      else if (gameState.player.name === '德魯伊' || gameState.player.name === '戰士') dexSaveBonus = 2;
+                      
+                      const saveRoll = roll(20);
+                      const saveTotal = saveRoll + dexSaveBonus;
+                      const saveDC = 14; 
+                      
+                      log(`🐉 [${enemy.name}] 雙翼狂舞，大口張開，對你噴吐積蓄已久的【毀滅烈焰吐息】！(每 4 回合固定爆發一次)`, 'text-orange-400 font-extrabold animate-pulse');
+                      let saveSuccess = saveTotal >= saveDC;
+                      if (saveSuccess) {
+                           dmg = Math.floor(dmg / 2);
+                           log(`✨ 豁免成功！(敏捷骰: ${saveRoll} + 修正: ${dexSaveBonus} = ${saveTotal} >= ${saveDC})。你靈巧地閃到巨石後，傷害減半！`, 'text-emerald-400 font-bold');
+                      } else {
+                           log(`❌ 豁免失敗！(敏捷骰: ${saveRoll} + 修正: ${dexSaveBonus} = ${saveTotal} < ${saveDC})。你被滔天怒火正面擊中！`, 'text-rose-400 font-semibold');
+                      }
+                      
+                      if (gameState.combatState.barkskinTurns > 0) {
+                          dmg = Math.floor(dmg * 1.5);
+                          log("🔥 [發火易燃] 因你處於 [樹膚術] 狀態，烈火將樹皮引燃！你承受了高達 " + dmg + " 點毀滅火焰傷害！ (無視 AC)", 'text-orange-500 font-bold animate-pulse');
+                      } else if (gameState.combatState.stoneskinTurns > 0) {
+                          dmg = Math.floor(dmg / 2);
+                          log("🧱 你的 [石膚術] 發揮效力，強行吸收了一半熱能，你受到 " + dmg + " 點火焰傷害！ (無視 AC)", 'text-rose-400 font-bold');
+                      } else {
+                          log("🔥 你受到 " + dmg + " 點烈火焚燒！ (無視 AC)", 'text-rose-500 font-bold');
+                      }
+                      gameState.player.hp -= dmg;
+
+                      if(gameState.combatState.enemyProneTurns > 0) gameState.combatState.enemyProneTurns--;
+                      if(gameState.combatState.enemyStunnedTurns > 0) gameState.combatState.enemyStunnedTurns--;
+                      if(gameState.combatState.enemyBlindTurns > 0) gameState.combatState.enemyBlindTurns--;
+                      if(gameState.combatState.enemyPoisonedTurns > 0) gameState.combatState.enemyPoisonedTurns--;
+                      if(gameState.combatState.rageTurns > 0) gameState.combatState.rageTurns--;
+                      if(gameState.combatState.stoneskinTurns > 0) gameState.combatState.stoneskinTurns--; 
+                      if(gameState.combatState.barkskinTurns > 0) gameState.combatState.barkskinTurns--; 
+                      if(gameState.combatState.enemyIntimidatedTurns > 0) gameState.combatState.enemyIntimidatedTurns--; 
+                      if(gameState.combatState.fatigueTurns > 0) gameState.combatState.fatigueTurns--; 
+                      if(gameState.combatState.backstabCooldown > 0) gameState.combatState.backstabCooldown--; 
+                      if(gameState.combatState.enemyStoneskinTurns > 0) gameState.combatState.enemyStoneskinTurns--;
+                      if(gameState.combatState.playerFrozenTurns > 0) gameState.combatState.playerFrozenTurns--;
+
+                      updateStats();
+                      if (gameState.player.hp <= 0) {
+                          renderScene('gameOver');
+                          return;
+                      }
+                      renderCombat(nextScene);
+                      return; 
+                  }
+             }
+
+             let currentAC = gameState.player.currentAC;
+             let shieldUsed = false;
+             
+             const enemyHitRoll = roll(20);
+             let finalEnemyRoll = enemyHitRoll;
+             
+             const hasDisadvantage = (gameState.combatState.enemyBlindTurns > 0) || (gameState.combatState.enemyIntimidatedTurns > 0);
+             if (hasDisadvantage) {
+                 finalEnemyRoll = Math.min(enemyHitRoll, roll(20));
+             }
+             if (gameState.combatState.barbarianReckless) {
+                 finalEnemyRoll = Math.max(enemyHitRoll, roll(20)); 
+                 gameState.combatState.barbarianReckless = false; 
+             }
+
+             if(gameState.combatState.enemyProneTurns > 0) gameState.combatState.enemyProneTurns--;
+             if(gameState.combatState.enemyStunnedTurns > 0) gameState.combatState.enemyStunnedTurns--;
+             if(gameState.combatState.enemyBlindTurns > 0) gameState.combatState.enemyBlindTurns--;
+             if(gameState.combatState.enemyPoisonedTurns > 0) gameState.combatState.enemyPoisonedTurns--; 
+             if(gameState.combatState.rageTurns > 0) gameState.combatState.rageTurns--;
+             if(gameState.combatState.stoneskinTurns > 0) gameState.combatState.stoneskinTurns--; 
+             if(gameState.combatState.barkskinTurns > 0) gameState.combatState.barkskinTurns--; 
+             if(gameState.combatState.enemyIntimidatedTurns > 0) gameState.combatState.enemyIntimidatedTurns--; 
+             if(gameState.combatState.fatigueTurns > 0) gameState.combatState.fatigueTurns--; 
+             if(gameState.combatState.backstabCooldown > 0) gameState.combatState.backstabCooldown--; 
+             if(gameState.combatState.enemyStoneskinTurns > 0) gameState.combatState.enemyStoneskinTurns--; 
+             if(gameState.combatState.playerFrozenTurns > 0) gameState.combatState.playerFrozenTurns--;
+             
+             let armorManEnrageHit = 0;
+             if (enemy.isArmorMan) {
+                 armorManEnrageHit = Math.max(0, Math.floor((enemy.maxHp - enemy.hp) / enemy.maxHp * 10));
+                 if (armorManEnrageHit > 0) {
+                     log(`🩸 [不朽狂怒] 鎧甲男子生命力越低，體內的邪神狂熱越發澎湃！(因已損失 ${armorManEnrageHit * 10}% 生命，本次攻擊獲得 +${armorManEnrageHit} 額外命中加成！)`, 'text-orange-400 font-semibold');
+                 }
+             }
+
+             const enemyHitTotal = finalEnemyRoll + Math.floor(enemy.dmg / 2) + (enemy.hitBonus || 0) + armorManEnrageHit - enemyHitDebuff;
+             
+             if (enemyHitTotal >= currentAC && enemyHitTotal < (currentAC + 5)) {
+                 const shieldAbility = gameState.player.abilities?.find(a => a.id === 'shield');
+                 if (shieldAbility && shieldAbility.cost > 0) {
+                     shieldAbility.cost--;
+                     currentAC += 5;
+                     shieldUsed = true;
+                     log("[護盾術] 🛡️ 觸發！奧術偏折將 AC 提升 5 點擋下了攻擊！(剩餘 " + shieldAbility.cost + " 次)", 'text-sky-400 font-bold animate-pulse');
+                 }
+             }
+
+             const useLegendaryAction = (enemy.maxHp >= 50) && (roll(10) <= 3) && !enemy.name.includes('上古紅龍');
+             
+             if (useLegendaryAction) {
+                 playSynthSound('spell');
+                 if (enemy.isSahuaginPrince) {
+                     let dmg = 10 - enemyDmgDebuff;
+                     if (dmg < 1) dmg = 1;
+                     if (gameState.combatState.stoneskinTurns > 0) dmg = Math.floor(dmg / 2);
+
+                     log(`🌊 [${enemy.name}] 揮舞雷湧三叉戟猛擊地面，召喚【深海怒濤】席捲全場！`, 'text-cyan-400 font-extrabold animate-pulse');
+                     gameState.player.hp -= dmg;
+                     log(`🌊 狂暴的浪潮將你吞噬，造成了 ${dmg} 點冷能與撞擊傷害！ (無視 AC)`, 'text-cyan-500 font-bold');
+
+                     const dexSave = roll(20);
+                     const dc = 13;
+                     log(`🌊 你試圖在激流中穩住身體，進行 敏捷豁免檢定 (難度 DC ${dc})...`, 'text-indigo-300');
+                     if (dexSave >= dc) {
+                         log(`✨ 豁免成功！(敏捷骰: ${dexSave} >= ${dc})。你穩穩站立，並未滑倒！`, 'text-emerald-400 font-bold');
+                     } else {
+                         gameState.combatState.playerProneTurns = 1;
+                         log(`🧼 豁免失敗！(敏捷骰: ${dexSave} < ${dc})。你被洶湧的急流沖走跌倒，【跌倒】 1 回合！`, 'text-amber-500 font-bold animate-pulse');
+                     }
+                 }
+                 else if (enemy.name.includes('純白雪龍')) {
+                     let dmg = 12 - enemyDmgDebuff;
+                     if (dmg < 1) dmg = 1;
+                     
+                     let conSaveBonus = 0;
+                     if (gameState.player.name === '野蠻人') conSaveBonus = 4;
+                     else if (gameState.player.name === '戰士') conSaveBonus = 2;
+                     else if (gameState.player.name === '德魯伊' || gameState.player.name === '牧師') conSaveBonus = 1;
+
+                     const saveRoll = roll(20);
+                     const saveTotal = saveRoll + conSaveBonus;
+                     const saveDC = 13;
+
+                     log(`❄️ [${enemy.name}] 振翅翱翔，對你噴吐刺骨的【寒霜吐息】！你感到血液凝結，急忙進行 體質豁免檢定 (難度 DC ${saveDC})...`, 'text-cyan-300');
+                     let saveSuccess = saveTotal >= saveDC;
+
+                     if (saveSuccess) {
+                          dmg = Math.floor(dmg / 2);
+                          log(`✨ 豁免成功！(體質骰: ${saveRoll} + 修正: ${conSaveBonus} = ${saveTotal} >= ${saveDC})。你咬緊牙關抵抗極寒，傷害減半！`, 'text-emerald-400 font-bold');
+                     } else {
+                          log(`❌ 豁免失敗！(體質骰: ${saveRoll} + 修正: ${conSaveBonus} = ${saveTotal} < ${saveDC})。極寒深入骨髓！`, 'text-rose-400 font-semibold');
+                     }
+
+                     if (gameState.combatState.stoneskinTurns > 0) {
+                          dmg = Math.floor(dmg / 2);
+                          log("❄️ 你的 [石膚術] 抵擋了部分衝擊，你受到 " + dmg + " 點寒霜傷害！ (無視 AC)", 'text-cyan-400 font-bold');
+                     } else {
+                          log("❄️ 你受到 " + dmg + " 點寒霜傷害！ (無視 AC)", 'text-cyan-500 font-bold');
+                     }
+
+                     if (!saveSuccess) {
+                          gameState.combatState.playerFrozenTurns = 2;
+                          log("❄️ 刺骨極寒將你雙腿與關節凍結！接下來 2 回合內你的【防禦AC -2】且【命中減半 / -2】！", 'text-cyan-400 font-bold animate-pulse');
+                     }
+                     gameState.player.hp -= dmg;
+                 }
+                 else if (enemy.type === 'dragon' || enemy.name.includes('巨龍') || enemy.name.includes('紅龍')) {
+                     let dmg = 14 - enemyDmgDebuff;
+                     if (dmg < 1) dmg = 1;
+                     
+                     let dexSaveBonus = 0;
+                     if (gameState.player.name === '盜賊' || gameState.player.name === '武僧') dexSaveBonus = 5;
+                     else if (gameState.player.name === '德魯伊' || gameState.player.name === '戰士') dexSaveBonus = 2;
+                     
+                     const saveRoll = roll(20);
+                     const saveTotal = saveRoll + dexSaveBonus;
+                     const saveDC = 13;
+                     
+                     log(`🐉 [${enemy.name}] 狂吼著對你噴吐【烈焰吐息】！你急忙飛身閃避，進行 敏捷豁免檢定 (難度 DC ${saveDC})...`, 'text-orange-300');
+                     let saveSuccess = saveTotal >= saveDC;
+                     if (saveSuccess) {
+                          dmg = Math.floor(dmg / 2);
+                          log(`✨ 豁免成功！(敏捷骰: ${saveRoll} + 修正: ${dexSaveBonus} = ${saveTotal} >= ${saveDC})。你靈巧地閃過了火焰核心，傷害減半！`, 'text-emerald-400 font-bold');
+                     } else {
+                          log(`❌ 豁免失敗！(敏捷骰: ${saveRoll} + 修正: ${dexSaveBonus} = ${saveTotal} < ${saveDC})。你被滾燙的熱浪正面吞噬！`, 'text-rose-400 font-semibold');
+                     }
+                     
+                     if (gameState.combatState.barkskinTurns > 0) {
+                         dmg = Math.floor(dmg * 1.5);
+                         log("🐉 [" + enemy.name + "] 狂吼著對你噴吐【烈焰吐息】！因你正處於 [樹膚術]，受到 " + dmg + " 點火焰傷害！ (無視 AC)", 'text-orange-400 font-bold animate-pulse');
+                     } else if (gameState.combatState.stoneskinTurns > 0) {
+                         dmg = Math.floor(dmg / 2);
+                         log("🐉 [" + enemy.name + "] 狂吼著對你噴吐【烈焰吐息】！但你的 [石膚術] 抵擋了衝擊，你受到 " + dmg + " 點火焰傷害！ (無視 AC)", 'text-rose-400 font-bold');
+                     } else {
+                         log("🐉 [" + enemy.name + "] 狂吼著對你噴吐【烈焰吐息】！你受到 " + dmg + " 點烈焰灼燒！ (無視 AC)", 'text-rose-500 font-bold');
+                     }
+                     gameState.player.hp -= dmg;
+                 } 
+                 else if (enemy.name.includes('巫妖') || enemy.name.includes('幽魂') || enemy.isDemilich) {
+                     let dmg = 8 - enemyDmgDebuff;
+                     if (dmg < 1) dmg = 1;
+                     if (gameState.combatState.stoneskinTurns > 0) dmg = Math.floor(dmg / 2);
+                     gameState.player.hp -= dmg;
+                     enemy.hp = Math.min(enemy.maxHp, enemy.hp + dmg);
+                     log("🩸 [" + enemy.name + "] 施展【靈魂虹吸】，你感到生命力被抽乾！你受到 " + dmg + " 點傷害，敵人回復了 " + dmg + " 點生命值！", 'text-fuchsia-400 font-bold');
+                 } 
+                 else if (enemy.name.includes('眼魔')) {
+                     let dmg = 10 - enemyDmgDebuff;
+                     if (dmg < 1) dmg = 1;
+                     if (gameState.combatState.stoneskinTurns > 0) dmg = Math.floor(dmg / 2);
+                     gameState.player.hp -= dmg;
+                     gameState.player.currentAC -= 1;
+                     log("👁️ [眼魔暴君] 釋放了灰色【解體射線】！你受到 " + dmg + " 點傷害，且防禦力場遭到瓦解 (AC-1)！", 'text-purple-400 font-bold');
+                 } 
+                 else if (enemy.name.includes('虛空')) {
+                     let dmg = 6 - enemyDmgDebuff;
+                     if (dmg < 1) dmg = 1;
+                     if (gameState.combatState.stoneskinTurns > 0) dmg = Math.floor(dmg / 2);
+                     gameState.player.hp -= dmg;
+                     gameState.player.currentAtkBonus -= 2;
+                     log("🌌 [虛空吞噬獸] 發動【虛空重力壓制】！你受到 " + dmg + " 點傷害，且空間扭曲導致下回合命中率降低 -2！", 'text-sky-300 font-bold');
+                 } 
+                 else if (enemy.isElderBrain || enemy.name.includes('奪心魔')) {
+                     let dmg = 9 - enemyDmgDebuff;
+                     if (dmg < 1) dmg = 1;
+                     if (gameState.combatState.stoneskinTurns > 0) dmg = Math.floor(dmg / 2);
+                     gameState.player.hp -= dmg;
+                     log("🧠 [" + enemy.name + "] 爆發強大【心靈波衝擊】，將心靈亂流直灌你的大腦，造成了 " + dmg + " 點心靈傷害！", 'text-fuchsia-400 font-bold');
+                 }
+                 else {
+                     let dmg = Math.floor((roll(enemy.dmg) + 4) * 1.5) - enemyDmgDebuff;
+                     if (dmg < 1) dmg = 1;
+                     
+                     const isFireEnemy = enemy.fireImmune || enemy.name.includes('炎魔');
+                     if (gameState.combatState.barkskinTurns > 0 && isFireEnemy) {
+                         dmg = Math.floor(dmg * 1.5);
+                         log("⚠️ [警告] 因身上覆蓋著 [樹膚術]，遭受來自 " + enemy.name + " 的火焰重擊傷害增至 1.5 倍！", 'text-orange-400 font-bold');
+                     } else if (gameState.combatState.stoneskinTurns > 0) {
+                         dmg = Math.floor(dmg / 2);
+                     }
+                     gameState.player.hp -= dmg;
+                     log("💥 [" + enemy.name + "] 爆發一記【傳奇狂擊】！突破了防禦造成 " + dmg + " 點傷害！", 'text-rose-500 font-bold');
+                 }
+                 
+                 updateStats();
+                 const statsPanel = document.getElementById('stats-panel');
+                 statsPanel.classList.remove('shake');
+                 void statsPanel.offsetWidth;
+                 statsPanel.classList.add('shake');
+                 
+                 if (gameState.player.hp <= 0) {
+                     renderScene('gameOver');
+                     return;
+                 }
+             } 
+             else {
+                 if (enemy.isMarilith) {
+                      log("⚔️ 傳奇六臂蛇魔猛烈揮舞六柄寒光閃閃的長刀，爆發【六臂連擊】！(普通攻擊進行 6 次)", 'text-rose-400 font-extrabold animate-pulse');
+                      for (let k = 1; k <= 6; k++) {
+                           if (gameState.player.hp <= 0) break;
+                           const mHitRoll = roll(20);
+                           let finalMHit = mHitRoll;
+                           if (hasDisadvantage) finalMHit = Math.min(mHitRoll, roll(20));
+                           const mHitTotal = finalMHit + 6 - enemyHitDebuff;
+                           
+                           if (mHitTotal >= currentAC || finalMHit >= 19) {
+                                let dmg = roll(3) + 2 - enemyDmgDebuff;
+                                if (dmg < 1) dmg = 1;
+                                if (finalMHit >= 19) {
+                                    dmg *= 2;
+                                    log("⚔️ 蛇魔連擊 (第 " + k + " 斬)：💥 暴擊！造成雙倍傷害 " + dmg + " 點物理傷害！", 'text-rose-500 font-bold animate-pulse');
+                                } else {
+                                    log("⚔️ 蛇魔連擊 (第 " + k + " 斬)：命中！造成 " + dmg + " 點物理傷害。", 'text-rose-400');
+                                }
+                                if (gameState.combatState.stoneskinTurns > 0) dmg = Math.max(1, Math.floor(dmg / 2));
+                                gameState.player.hp -= dmg;
+                           } else {
+                                log("⚔️ 蛇魔連擊 (第 " + k + " 斬)：未命中。", 'text-gray-400');
+                           }
+                      }
+                      updateStats();
+                      if (gameState.player.hp <= 0) {
+                          renderScene('gameOver');
+                          return;
+                      }
+                 } else {
+                     if (enemyHitTotal >= currentAC || finalEnemyRoll === 20) {
+                         let enemyDmgBonus = (enemy.dmgBonus !== undefined) ? enemy.dmgBonus : 2;
+                         let baseEnemyDmg = roll(enemy.dmg) + enemyDmgBonus;
+                         
+                         let isEnemyCrit = (finalEnemyRoll === 20);
+                         
+                         if (isEnemyCrit && enemy.isArmorMan) {
+                              baseEnemyDmg *= 3; 
+                              log("⚔️ 鎧甲男子雙眼猩紅大盛，使出不朽邪能【死亡死者衝鋒】！造成 3 倍爆發重擊！", 'text-fuchsia-500 font-extrabold animate-pulse');
+                         } else if (isEnemyCrit) {
+                              baseEnemyDmg *= 2;
+                         }
+
+                         let dmg = baseEnemyDmg - enemyDmgDebuff;
+                         if (dmg < 1) dmg = 1;
+                         
+                         const isFireEnemy = enemy.fireImmune || enemy.name.includes('炎魔') || enemy.name.includes('雙頭犬') || enemy.name.includes('巨龍') || enemy.name.includes('紅龍');
+                         if (gameState.combatState.barkskinTurns > 0 && isFireEnemy) {
+                             dmg = Math.floor(dmg * 1.5);
+                             log("⚠️ [警告] 因身上覆蓋著 [樹膚術]，極易燃的古樹之皮令你遭受來自 " + enemy.name + " 的火焰反擊傷害增至 1.5 倍！", 'text-orange-400 font-bold');
+                         } else if (gameState.combatState.stoneskinTurns > 0) {
+                             dmg = Math.max(1, Math.floor(dmg / 2));
+                         }
+
+                         gameState.player.hp -= dmg;
+                         
+                         if (enemy.isArmorMan) {
+                              enemy.hp = Math.min(enemy.maxHp, enemy.hp + 2);
+                              log("❤️ [邪神渴血] 鎧甲男子的符文大劍砍中你，貪婪地吸取血肉，恢復了 2 點生命值！", 'text-fuchsia-400 font-bold animate-pulse');
+                         }
+
+                         const statsPanel = document.getElementById('stats-panel');
+                         statsPanel.classList.remove('shake');
+                         void statsPanel.offsetWidth;
+                         statsPanel.classList.add('shake');
+
+                         playSynthSound('hit');
+                         let dmgLogStr = "👹 敵人反擊！" + enemy.name + " 命中造成 " + dmg + " 點傷害。";
+                         if (gameState.combatState.enemyIntimidatedTurns > 0) {
+                             dmgLogStr += " (被驚嚇劣勢下依然命中！)";
+                         }
+                         if (enemyHitDebuff > 0) {
+                             dmgLogStr += " (受減免減益影響)";
+                         }
+                         log(dmgLogStr, 'text-rose-500 font-bold');
+                         
+                         updateStats();
+                         
+                         if (gameState.player.hp <= 0) {
+                             renderScene('gameOver');
+                             return;
+                         }
+                     } else {
+                         if(!shieldUsed) {
+                             let missLogStr = "👹 敵人攻擊未命中。";
+                             if (gameState.combatState.enemyIntimidatedTurns > 0) {
+                                 missLogStr += " (威壓干擾生效)";
+                             }
+                             log(missLogStr, 'text-gray-400');
+                         }
+                     }
+                 }
+             }
+             
+             renderCombat(nextScene);
+        }
+
+        function checkCombatEnd(nextScene) {
+             const enemy = gameState.currentEnemy;
+             if (enemy.hp <= 0) {
+                 enemy.hp = 0; 
+                 
+                 gameState.player.maxHp += 2;
+                 gameState.player.hp += 2;
+                 
+                 updateStats(); 
+                 
+                 log("戰鬥勝利！" + enemy.name + " 被擊倒了。", 'text-emerald-400 font-bold text-lg');
+                 log("✨ 吸收了敵人的殘留精華，最大生命值與當前生命值提升 2 點！", 'text-sky-300 font-bold');
+                 
+                 const actions = document.getElementById('action-panel');
+                 actions.innerHTML = ''; 
+                 
+                 const btnProceed = document.createElement('button');
+                 btnProceed.className = 'bg-emerald-700/80 hover:bg-emerald-600 p-4 rounded-xl font-bold text-white shadow-lg transition-all w-full sm:col-span-2 text-lg animate-fade-in';
+                 btnProceed.textContent = '戰鬥結束，繼續前行';
+                 
+                 btnProceed.onclick = () => {
+                      document.getElementById('enemy-stats-panel').classList.add('hidden');
+                      renderScene(nextScene);
+                 };
+                 actions.appendChild(btnProceed);
+                 return false; 
+             }
+             return true; 
+        }
+
+        window.log = log;
+        window.roll = roll;
+        window.updateStats = updateStats;
+        window.renderScene = renderScene;
+        window.startCombat = startCombat;
+        window.renderCombat = renderCombat;
+        window.playerTurn = playerTurn;
+        window.enemyTurn = enemyTurn;
+        window.usePotionOutsideCombat = usePotionOutsideCombat;
+        window.usePotionInCombat = usePotionInCombat;
+        window.playSynthSound = playSynthSound;
+
+        // 綁定開局動作
+        window.onload = () => {
+            renderScene('selectClass');
+        };
+    </script>
+</body>
+</html>
