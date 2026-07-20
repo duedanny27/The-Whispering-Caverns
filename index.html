@@ -208,7 +208,7 @@
                 ]
             },
             rogue: { 
-                name: '盜賊', hp: 24, atkBonus: 7, ac: 14, desc: '致命刺客。擁有【被動：直覺閃避】每場前 2 次受傷強制減半！配備拋沙、偷襲、兵器配背刺高重擊與遠程毒鏢。', baseDmgDie: 6, baseDmgBonus: 2,
+                name: '盜賊', hp: 24, atkBonus: 7, ac: 14, desc: '致命刺客，投出19即重擊。擁有【被動：直覺閃避】每場前 2 次受傷強制減半！配備拋沙、偷襲、兵器配背刺高重擊與遠程毒鏢。', baseDmgDie: 6, baseDmgBonus: 2,
                 abilities: [
                     { name: '背刺', id: 'backstab', cost: 'inf', desc: '物理傷害！手持短劍爆發6倍傷害、十手為5倍、長劍或彎刀為4倍，其他武器為3倍 (背刺可重擊，冷卻 3 回合)' },
                     { name: '拋沙', id: 'throw_sand', cost: 4, desc: '特製砂礫：獲得超高精準命中加成(+5)，使敵人陷入目盲狀態 2+1D6 回合，敵方攻擊劣勢，我方攻擊優勢 (每場可用 4 次)' },
@@ -1095,7 +1095,7 @@
                         { name: '半神巫妖 (LEGENDARY BOSS)', hp: 65, ac: 18, dmg: 9, type: 'undead', isFlying: true, legs: 2, hitBonus: 9, isDemilich: true, desc: '虛空中懸浮著一顆由無數靈魂寶石裝飾的金色頭骨，雙眼噴吐著冰冷的死靈焰火。那是超越生死的存在——<span class="text-rose-500 font-black">半神巫妖 (傳奇首領)</span>！他發出空洞刺骨的冷笑。' },
                         { name: '主腦 (LEGENDARY BOSS)', hp: 100, ac: 1, dmg: 9, type: 'aberration', isFlying: false, legs: 0, hitBonus: 5, isElderBrain: true, lightningWeak: true, desc: '大廳中央的黏液池中，一個巨大的、充滿褶皺的粉紅色大腦正在劇烈脈動，無數半透明的心靈觸鬚在虛空中瘋狂揮舞。那是心靈異怪的至高主宰——<span class="text-rose-500 font-black">主腦 (傳奇首領/怕電)</span>！' },
                         { name: '精靈傳奇大法師 (LEGENDARY BOSS)', hp: 75, ac: 14, dmg: 12, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 5, isElvenArchmage: true, desc: '一名肌肉壯實，臉皮彷彿被撕下來精靈男子，手中法杖散發著毀天滅地的祕法亂流，傲慢的眼神將你視作微不足道的螻蟻。那是追求真理至瘋魔的——<span class="text-rose-500 font-black">精靈傳奇大法師 (傳奇首領)</span>！' },
-                        { name: '上古紅龍 (LEGENDARY BOSS)', hp: 90, ac: 18, dmg: 8, dmgBonus: 5, type: 'dragon', isFlying: true, legs: 4, fireImmune: true, coldWeak: true, hitBonus: 9, desc: '大地突然劇烈撕裂，滾燙 of 熔岩如噴泉般湧出！一頭雙翼遮天幕日、渾線散發古老毀滅威壓的 <span class="text-rose-500 font-black">上古紅龍 (傳奇首領/火焰免疫/怕冰/命中加成+9)</span> 緩緩降臨，熔岩在其鱗甲間流淌！' },
+                        { name: '上古紅龍 (LEGENDARY BOSS)', hp: 90, ac: 18, dmg: 8, dmgBonus: 5, type: 'dragon', isFlying: true, legs: 4, fireImmune: true, coldWeak: true, hitBonus: 9, desc: '大地突然劇烈撕裂，滾燙 of 熔岩如噴泉般湧出！一頭雙翼遮天蔽日、渾身散發古老毀滅威壓的 <span class="text-rose-500 font-black">上古紅龍 (傳奇首領/火焰免疫/怕冰/命中加成+9)</span> 緩緩降臨，熔岩在其鱗甲間流淌！' },
                         { name: '巨型原初梟熊 (LEGENDARY BOSS)', hp: 85, ac: 16, dmg: 8, dmgBonus: 3, type: 'beast', isFlying: true, legs: 4, hitBonus: 6, isPrimalOwlbear: true, desc: '一頭體型龐大、覆蓋著鋼鐵般羽毛的 <span class="text-rose-500 font-black">巨型原初梟熊 (傳奇首領/野獸/飛行/巨型)</span> 猛然張開佈滿利齒的巨喙，狂風隨著其翅膀羽翼的拍打呼嘯而至！' },
                         { name: '傳奇六臂蛇魔 (LEGENDARY BOSS)', hp: 80, ac: 14, dmg: 3, dmgBonus: 2, type: 'fiend', isFlying: false, legs: 1, hitBonus: 6, isMarilith: true, desc: '一位有著致命女性上半身與龐大蟒蛇下半身的 <span class="text-rose-500 font-black">傳奇六臂蛇魔 (傳奇首領/惡魔)</span> 揮舞著六柄寒光閃閃的附魔大刀，帶著殘忍的微笑盯著你！' },
                         { name: '鎧甲男子 (LEGENDARY BOSS)', hp: 80, ac: 20, dmg: 12, dmgBonus: 2, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 7, isArmorMan: true, desc: '一名身披沉重漆黑魔甲、戴著崢嶸角盔的男子緩步踏出，他手握一柄滿是符文乾涸血漬的狂暴巨劍，雙眼燃燒著邪神之火。那是擁有不朽邪神血脈的——<span class="text-rose-500 font-black">鎧甲男子 (傳奇首領/人形生物)</span>！' }
@@ -1738,7 +1738,7 @@
             } 
             else if (ability.id === 'barkskin') {
                 gameState.combatState.barkskinTurns = 10;
-                log("[樹膚術] 🌿 古樹之皮在周所角質化！接下來 10 回合防禦 (AC) 提升 4 點，遭遭受火焰怪物傷害時變為 1.5 倍！", 'text-emerald-300 font-bold');
+                log("[樹膚術] 🌿 古樹之皮在周所角質化！接下來 10 回合防禦 (AC) 提升 4 點，遭受火焰怪物傷害時變為 1.5 倍！", 'text-emerald-300 font-bold');
                 updateStats();
             }
             else if (ability.id === 'heal') {
