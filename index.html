@@ -6,7 +6,7 @@
     <title>耳語地穴：傳奇試煉</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght=400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #0f172a; color: #e2e8f0; }
         .glass-panel { background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
         .log-window { scrollbar-width: thin; scrollbar-color: #475569 #1e293b; }
@@ -213,7 +213,8 @@
                     { name: '背刺', id: 'backstab', cost: 'inf', desc: '物理傷害！手持短劍爆發6倍傷害、十手為5倍、長劍或彎刀為4倍，其他武器為3倍 (背刺可重擊，冷卻 3 回合)' },
                     { name: '拋沙', id: 'throw_sand', cost: 4, desc: '特製砂礫：獲得超高精準命中加成(+5)，使敵人陷入目盲狀態 2+1D6 回合，敵方攻擊劣勢，我方攻擊優勢 (每場可用 4 次)' },
                     { name: '毒鏢', id: 'poison_dart', cost: 3, desc: '戰術毒素：造成 2D6+1 點毒素傷害 (每日限 3 次)。命中時敵人須通過體質(CON)豁免，否則「中毒」3回合(命中-1與傷害-1)。對不死生物、惡魔等無生命體無效。' },
-                    { name: '偷襲', id: 'sneak_attack', cost: 'inf', desc: '限對目盲敵人施展，造成物理普攻外加 1D6 額外傷害' }
+                    { name: '偷襲', id: 'sneak_attack', cost: 'inf', desc: '限對目盲或跌倒敵人施展，造成物理普攻外加 1D6 額外傷害' },
+                    { name: '掃倒', id: 'sweep', cost: 'inf', desc: '物理戰技：命中-5。若裝備長杖(法杖)或盾牌則因重心優勢使命中懲罰減輕至-2。擊中使非飛行/非植物對手跌倒並無法行動 1+1D3 回合且AC-4' }
                 ]
             },
             monk: {
@@ -269,8 +270,6 @@
                 ]
             }
         };
-
-        // ... [getCritThreshold, log, usePotionOutsideCombat, updateStats, usePotionInCombat] 已在此處保持完整 ...
 
         function getCritThreshold() {
             if (!gameState.player) return 20;
@@ -1211,8 +1210,6 @@
             renderCombat(nextScene);
         }
 
-        // ... [renderCombat, playerTurn, executeAttack] 已在此處保持完整 ...
-
         function renderCombat(nextScene) {
             const display = document.getElementById('story-display');
             const p = gameState.player;
@@ -1362,9 +1359,9 @@
                         btnAbility.className = 'bg-gray-800/80 p-3 sm:p-4 rounded-xl font-bold text-gray-500 cursor-not-allowed border border-gray-700 flex flex-col justify-center items-center text-center';
                         btnAbility.innerHTML = `<div class="text-lg">🔪 ${ability.name}</div><span class="text-xs font-normal opacity-80 mt-1">冷卻中 (剩餘 ${gameState.combatState.backstabCooldown} 回合)</span>`;
                         btnAbility.disabled = true;
-                    } else if (ability.id === 'sneak_attack' && gameState.combatState.enemyBlindTurns <= 0) {
+                    } else if (ability.id === 'sneak_attack' && gameState.combatState.enemyBlindTurns <= 0 && gameState.combatState.enemyProneTurns <= 0) {
                         btnAbility.className = 'bg-gray-800/80 p-3 sm:p-4 rounded-xl font-bold text-gray-500 cursor-not-allowed border border-gray-700 flex flex-col justify-center items-center text-center';
-                        btnAbility.innerHTML = `<div class="text-lg">🗡️ ${ability.name}</div><span class="text-xs font-normal opacity-80 mt-1">需要敵人處於目盲狀態</span>`;
+                        btnAbility.innerHTML = `<div class="text-lg">🗡️ ${ability.name}</div><span class="text-xs font-normal opacity-80 mt-1">需要敵人處於目盲或跌倒狀態</span>`;
                     } else {
                         btnAbility.className = 'bg-indigo-700/80 hover:bg-indigo-600 p-3 sm:p-4 rounded-xl font-bold text-white shadow-lg border border-indigo-500 transition-all active:scale-95 text-left flex flex-col justify-between';
                         const costText = ability.cost === 'inf' ? '無限次' : `剩 ${ability.cost} 次`;
@@ -1396,14 +1393,14 @@
                         if(ability.id === 'call_lightning') icon = '⚡';
                         
                         let customDesc = ability.desc;
-                        if (ability.id === 'sweep' && (gameState.player.name === '戰士' || gameState.player.name === '武僧')) {
+                        if (ability.id === 'sweep' && (gameState.player.name === '戰士' || gameState.player.name === '武僧' || gameState.player.name === '盜賊')) {
                             const hasShield = !!gameState.gear.shield;
                             const hasStaff = gameState.gear.weapon && gameState.gear.weapon.id === 'staff_p1';
                             const reductionActive = hasShield || hasStaff;
                             const weaponReason = hasShield ? "裝備了精鋼盾牌" : (hasStaff ? "裝備了魔力法杖" : "");
                             customDesc = reductionActive 
                                 ? `物理戰技：已啟動${weaponReason}優勢！命中懲罰由 -5 減輕至 -2！擊中將使非飛行/非植物對手跌倒並無法行動 1+1D3 回合且 AC-4。`
-                                : `物理戰技：命中-5。若裝備長杖（武僧/戰士適用）或盾牌（僅戰士適用）可使命中懲罰減輕至 -2。擊中使對手跌倒且無法行動 1+1D3 回合且 AC-4。`;
+                                : `物理戰技：命中-5。若裝備長杖（武僧/戰士/盜賊適用）或盾牌（戰士/盜賊適用）可使命中懲罰減輕至 -2。擊中使對手跌倒且無法行動 1+1D3 回合且 AC-4。`;
                         }
 
                         btnAbility.innerHTML = `
@@ -1846,7 +1843,6 @@
                  if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
                      hitRoll = Math.max(hitRoll, roll(20));
                  }
-                 // 修正命中檢定判定，原先減 2 的懲罰改為「神準拋沙 +5 加成」，大副改善打不中人的問題！
                  const hitTotal = hitRoll + player.currentAtkBonus + 5;
                  let targetAC = enemy.ac;
                  if (gameState.combatState.enemyProneTurns > 0) targetAC -= 4;
@@ -1928,10 +1924,10 @@
                      if (isCrit) {
                          log("[偷襲] 重擊！精準刺入破綻！造成 " + baseDmg + " 物理 + " + sneakDmg + " 偷襲 = 總計 " + totalDmg + " 點傷害！", 'text-fuchsia-400 font-bold text-lg');
                      } else {
-                         log("[偷襲] 命中目盲的敵人！造成 " + baseDmg + " 物理 + " + sneakDmg + " 偷襲 = 總計 " + totalDmg + " 點傷害。", 'text-fuchsia-300 font-bold');
+                         log("[偷襲] 命中目盲或跌倒的敵人！造成 " + baseDmg + " 物理 + " + sneakDmg + " 偷襲 = 總計 " + totalDmg + " 點傷害。", 'text-fuchsia-300 font-bold');
                      }
                  } else {
-                     log("[偷襲] 雖然敵人目盲，但你的攻擊還是意外落空了。", 'text-gray-400');
+                     log("[偷襲] 雖然敵人目盲或跌倒，但你的攻擊還是意外落空了。", 'text-gray-400');
                  }
             } 
             else if (ability.id === 'turn_undead') {
@@ -2181,38 +2177,35 @@
                   if (gameState.combatState.bossTurnCounter % 5 === 0) {
                       playSynthSound('spell');
                       
-                      // 依據職業特性設定力量(STR)或敏捷(DEX)豁免加成
                       let saveBonus = 0;
                       let saveType = "力量";
                       const pClass = gameState.player.name;
 
                       if (pClass === '戰士' || pClass === '野蠻人') {
-                          saveBonus = 4; // 力量優勢，強行頂住狂風
+                          saveBonus = 4; 
                           saveType = "力量";
                       } else if (pClass === '盜賊' || pClass === '武僧') {
-                          saveBonus = 4; // 敏捷優勢，靈巧閃避強風
+                          saveBonus = 4; 
                           saveType = "敏捷";
                       } else if (pClass === '德魯伊' || pClass === '牧師') {
-                          saveBonus = 2; // 中等體格與反應
+                          saveBonus = 2; 
                           saveType = "體格反應";
                       } else {
-                          saveBonus = 0; // 奧術雙脆反應與力量較為薄弱
+                          saveBonus = 0; 
                           saveType = "體格反應";
                       }
 
                       const saveRoll = roll(20);
                       const saveTotal = saveRoll + saveBonus;
-                      const saveDC = 14; // 設定中高難度的豁免檻 (DC 14)
+                      const saveDC = 14; 
 
                       log(`🐻 [${enemy.name}] 猛然展翅，雙翼掀起一陣摧枯拉朽的狂暴氣流！發動【原初狂風掃倒】！`, 'text-amber-400 font-extrabold animate-pulse');
                       log(`🧼 你急忙試圖穩住身軀，進行了一次 【${saveType} 豁免檢定】 (難度目標 DC: ${saveDC})...`, 'text-indigo-300');
 
                       if (saveTotal >= saveDC) {
-                          // 豁免成功：不受控制效果影響
                           log(`✨ 豁免成功！(擲骰檢定: ${saveRoll} + 職業修正 ${saveBonus} = ${saveTotal} >= DC ${saveDC})。你咬緊牙關在撕裂的狂風中站穩了腳步，並未跌倒！`, 'text-emerald-400 font-bold');
                       } else {
-                          // 豁免失敗：套用隨機回合的跌倒控制
-                          const duration = roll(3); // 1D3 回合
+                          const duration = roll(3); 
                           gameState.combatState.playerProneTurns = duration; 
                           log(`❌ 豁免失敗！(擲骰檢定: ${saveRoll} + 職業修正 ${saveBonus} = ${saveTotal} < DC ${saveDC})。毀滅性風壓狠狠將你拍倒在地，陷入【跌倒】狀態 ${duration} 回合！【無法行動，且 AC 防禦力下降 4 點】！`, 'text-rose-500 font-bold animate-bounce');
                       }
@@ -2380,8 +2373,7 @@
                      if (dexSave >= dc) {
                          log(`✨ 豁免成功！(敏捷骰: ${dexSave} >= ${dc})。你穩穩站立，並未滑倒！`, 'text-emerald-400 font-bold');
                      } else {
-                         // 調整：鯊化魚人親王的【深海怒濤】改為 1D3 回合隨機跌倒控制！
-                         const duration = roll(3); // 1D3 回合
+                         const duration = roll(3); 
                          gameState.combatState.playerProneTurns = duration;
                          log(`🧼 豁免失敗！(敏捷骰: ${dexSave} < ${dc})。你被洶湧的急流沖走跌倒，陷入【跌倒】狀態 ${duration} 回合！`, 'text-amber-500 font-bold animate-pulse');
                      }
@@ -2608,8 +2600,6 @@
              
              renderCombat(nextScene);
         }
-
-        // ... [checkCombatEnd, window bindings] 已在此處保持完整 ...
 
         function checkCombatEnd(nextScene) {
              const enemy = gameState.currentEnemy;
