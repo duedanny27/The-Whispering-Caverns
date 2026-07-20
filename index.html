@@ -211,7 +211,7 @@
                 name: '盜賊', hp: 20, atkBonus: 7, ac: 14, desc: '致命刺客。投出19即重擊，配備拋沙、偷襲技巧，與大跨度優化的遠程毒鏢。裝備劍與十手背刺倍率提升。', baseDmgDie: 6, baseDmgBonus: 2,
                 abilities: [
                     { name: '背刺', id: 'backstab', cost: 'inf', desc: '物理傷害！手持短劍爆發6倍傷害、十手為5倍、長劍或彎刀為4倍，其他武器為3倍 (背刺可重擊，冷卻 3 回合)' },
-                    { name: '拋沙', id: 'throw_sand', cost: 3, desc: '使敵人陷入目盲狀態 2+1D6 回合，敵方攻擊劣勢，我方攻擊優勢' },
+                    { name: '拋沙', id: 'throw_sand', cost: 4, desc: '特製砂礫：獲得超高精準命中加成(+5)，使敵人陷入目盲狀態 2+1D6 回合，敵方攻擊劣勢，我方攻擊優勢 (每場可用 4 次)' },
                     { name: '毒鏢', id: 'poison_dart', cost: 3, desc: '戰術毒素：造成 2D6+1 點毒素傷害 (每日限 3 次)。命中時敵人須通過體質(CON)豁免，否則「中毒」3回合(命中-1與傷害-1)。對不死生物、惡魔等無生命體無效。' },
                     { name: '偷襲', id: 'sneak_attack', cost: 'inf', desc: '限對目盲敵人施展，造成物理普攻外加 1D6 額外傷害' }
                 ]
@@ -269,6 +269,8 @@
                 ]
             }
         };
+
+        // ... [getCritThreshold, log, usePotionOutsideCombat, updateStats, usePotionInCombat] 已在此處保持完整 ...
 
         function getCritThreshold() {
             if (!gameState.player) return 20;
@@ -707,7 +709,7 @@
                     actions.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 shrink-0';
                     display.innerHTML = `
                         <h2 class="text-3xl font-bold mb-4 text-white text-center drop-shadow animate-fade-in">選擇你的角色與天命</h2>
-                        <p class="mb-6 text-gray-300 text-center">進入幽深而陰涼的耳語地穴前，請選擇一個符合你靈魂的職業：</p>
+                        <p class="mb-6 text-gray-300 text-center">進入幽深而陰涼的耳語地穴前，請選擇一個符合死神耳語的職業：</p>
                     `;
                     const classOrder = ['fighter', 'barbarian', 'rogue', 'monk', 'cleric', 'druid', 'wizard', 'sorcerer'];
                     classOrder.forEach(key => {
@@ -1120,7 +1122,7 @@
                             <div class="bg-slate-900/80 border border-amber-500/50 p-6 rounded-2xl max-w-2xl mx-auto space-y-4 shadow-2xl leading-relaxed text-left text-gray-200">
                                 <p>在凡人口耳相傳的故事中，耳語地穴曾是一座無人能還的血色墓穴。但今天，你用鋼鐵般的意志、無與倫比的智慧與力量，親手斬殺了地穴最深處的恐怖禁忌！</p>
                                 <p class="font-bold text-amber-300">即便是傳奇，都在你的武器與奧法面前灰飛煙滅！</p>
-                                <p>你的名字將永遠鐫刻在冒險者的大理石神殿最頂峰。人們不會僅稱你為「探險者」或「英雄」——因為從這一刻起，你本身就是迴盪於整個世界中的<span class="text-amber-400 font-extrabold">永恆傳奇</span>！</p>
+                                <p>你的名字將永遠鐫刻在冒險者的大理石神殿最頂峰.人們不會僅稱你為「探險者」或「英雄」——因為從這一刻起，你本身就是迴盪於整個世界中的<span class="text-amber-400 font-extrabold">永恆傳奇</span>！</p>
                             </div>
                             <div class="text-7xl my-8 drop-shadow-md">🏆🌌👑⚔️💎</div>
                         </div>
@@ -1192,7 +1194,7 @@
             
             if (gameState.player.abilities) {
                 gameState.player.abilities.forEach(ab => {
-                    if (ab.id === 'throw_sand') ab.cost = 3;
+                    if (ab.id === 'throw_sand') ab.cost = 4; // 提升為每場 4 次
                     if (ab.id === 'stun_strike') ab.cost = 3;
                     if (ab.id === 'flurry') ab.cost = 5;
                     if (ab.id === 'stoneskin') ab.cost = (gameState.player.name === '德魯伊') ? 1 : 2; 
@@ -1208,6 +1210,8 @@
             updateStats();
             renderCombat(nextScene);
         }
+
+        // ... [renderCombat, playerTurn, executeAttack] 已在此處保持完整 ...
 
         function renderCombat(nextScene) {
             const display = document.getElementById('story-display');
@@ -1640,7 +1644,7 @@
                     log("[力竭波] 🌀 綠色衰弱光波席捲！[" + enemy.name + "] 全身肌肉脫力！其命中與傷害降低 3 點 (持續 " + duration + " 回合)。", 'text-sky-300 font-bold animate-pulse');
 
                     if (enemy.isFlying) {
-                        const isGiant = (enemy.type === 'giant' || enemy.type === 'dragon' || enemy.type === 'monstrosity' || enemy.name.includes('巨人') || enemy.name.includes('巨怪') || enemy.name.includes('巨龍') || enemy.name.includes('紅龍') || enemy.name.includes('九頭蛇') || enemy.name.includes('炎魔') || enemy.name.includes('吞噬獸') || enemy.name.includes('眼魔') || enemy.name.includes('親王')) && !enemy.name.includes('奪心魔');
+                        const isGiant = (enemy.type === 'giant' || enemy.type === 'dragon' || enemy.type === 'monstrosity' || enemy.name.includes('巨人') || enemy.name.includes('巨怪') || enemy.name.includes('巨龍') || enemy.name.includes('紅龍') || enemy.name.includes('九頭蛇') || enemy.name.includes('炎魔') || enemy.name.includes('吞噬獸') || enemy.name.includes('眼魔') || enemy.name.includes('梟熊') || enemy.name.includes('男爵') || enemy.name.includes('親王')) && !enemy.name.includes('奪心魔');
                         let fallDmg = 0;
                         if (isGiant) {
                             fallDmg = roll(6) + roll(6) + roll(6) + roll(6) + roll(6); 
@@ -1706,7 +1710,7 @@
             } 
             else if (ability.id === 'barkskin') {
                 gameState.combatState.barkskinTurns = 10;
-                log("[樹膚術] 🌿 古樹之皮在周身角質化！接下來 10 回合防禦 (AC) 提升 4 點，遭受到火焰怪物傷害時變為 1.5 倍！", 'text-emerald-300 font-bold');
+                log("[樹膚術] 🌿 古樹之皮在周所角質化！接下來 10 回合防禦 (AC) 提升 4 點，遭受到火焰怪物傷害時變為 1.5 倍！", 'text-emerald-300 font-bold');
                 updateStats();
             }
             else if (ability.id === 'heal') {
@@ -1836,15 +1840,22 @@
                      log("[背刺] 錯失良機，攻擊被躲開了。", 'text-gray-400');
                  }
                  gameState.combatState.backstabCooldown = 3;
-            } else if (ability.id === 'throw_sand') {
+            } 
+            else if (ability.id === 'throw_sand') {
                  let hitRoll = roll(20);
                  if (gameState.combatState.enemyBlindTurns > 0 || gameState.combatState.enemyStunnedTurns > 0) {
                      hitRoll = Math.max(hitRoll, roll(20));
                  }
-                 const hitTotal = hitRoll + player.currentAtkBonus - 2;
-                 if (hitTotal >= enemy.ac) { 
+                 // 修正命中檢定判定，原先減 2 的懲罰改為「神準拋沙 +5 加成」，大副改善打不中人的問題！
+                 const hitTotal = hitRoll + player.currentAtkBonus + 5;
+                 let targetAC = enemy.ac;
+                 if (gameState.combatState.enemyProneTurns > 0) targetAC -= 4;
+
+                 log(`[拋沙] 💨 撒出特製砂礫！(命中檢定: ${hitRoll} + 屬性 ${player.currentAtkBonus} + 拋沙神準加成 +5 = ${hitTotal} vs 敵方AC ${targetAC})`, 'text-indigo-300');
+
+                 if (hitTotal >= targetAC || hitRoll === 20) { 
                      gameState.combatState.enemyBlindTurns = 2 + roll(6);
-                     log("[拋沙] 成功命中！沙子飛入敵人的眼睛，接下來 " + gameState.combatState.enemyBlindTurns + " 回合陷入目盲狀態。", 'text-amber-300 font-bold');
+                     log("[拋沙] 成功命中！沙子飛入敵人的眼睛，接下來 " + gameState.combatState.enemyBlindTurns + " 回合陷入目盲狀態，敵方攻擊失焦且我方處於優勢！", 'text-amber-300 font-bold');
                  } else {
                      log("[拋沙] 敵人偏頭躲過了沙子，未受影響。", 'text-gray-400');
                  }
@@ -2336,8 +2347,10 @@
                      if (dexSave >= dc) {
                          log(`✨ 豁免成功！(敏捷骰: ${dexSave} >= ${dc})。你穩穩站立，並未滑倒！`, 'text-emerald-400 font-bold');
                      } else {
-                         gameState.combatState.playerProneTurns = 1;
-                         log(`🧼 豁免失敗！(敏捷骰: ${dexSave} < ${dc})。你被洶湧的急流沖走跌倒，【跌倒】 1 回合！`, 'text-amber-500 font-bold animate-pulse');
+                         // 調整：鯊化魚人親王的【深海怒濤】改為 1D3 回合隨機跌倒控制！
+                         const duration = roll(3); // 1D3 回合
+                         gameState.combatState.playerProneTurns = duration;
+                         log(`🧼 豁免失敗！(敏捷骰: ${dexSave} < ${dc})。你被洶湧的急流沖走跌倒，陷入【跌倒】狀態 ${duration} 回合！`, 'text-amber-500 font-bold animate-pulse');
                      }
                  }
                  else if (enemy.name.includes('純白雪龍')) {
@@ -2562,6 +2575,8 @@
              
              renderCombat(nextScene);
         }
+
+        // ... [checkCombatEnd, window bindings] 已在此處保持完整 ...
 
         function checkCombatEnd(nextScene) {
              const enemy = gameState.currentEnemy;
