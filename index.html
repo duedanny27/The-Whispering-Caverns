@@ -212,7 +212,7 @@
                 abilities: [
                     { name: '背刺', id: 'backstab', cost: 'inf', desc: '物理傷害！手持短劍爆發6倍傷害、十手為5倍、長劍或彎刀為4倍，其他武器為3倍 (背刺可重擊，冷卻 3 回合)' },
                     { name: '拋沙', id: 'throw_sand', cost: 4, desc: '特製砂礫：獲得超高精準命中加成(+5)，使敵人陷入目盲狀態 2+1D6 回合，敵方攻擊劣勢，我方攻擊優勢 (每場可用 4 次)' },
-                    { name: '毒鏢', id: 'poison_dart', cost: 3, desc: '戰術毒素：造成 2D6+1 點毒素傷害 (每日限 3 次)。命中時敵人須通過體質(CON)豁免，否則「中毒」3回合(命中-1與傷害-1)。對不死生物、惡魔等無生命體無效。' },
+                    { name: '毒鏢', id: 'poison_dart', cost: 3, desc: '戰術毒素：造成 2D6+1 點毒素傷害 (每日限 3 次)。命中時敵人須通過體質(CON)豁免，否則「中毒」2D3+2回合(命中-2與傷害-2)。對不死生物、惡魔等無生命體無效。' },
                     { name: '偷襲', id: 'sneak_attack', cost: 'inf', desc: '限對目盲或跌倒敵人施展，造成物理普攻外加 1D6 額外傷害' },
                     { name: '掃倒', id: 'sweep', cost: 'inf', desc: '物理戰技：命中-5。若裝備長杖(法杖)或盾牌則因重心優勢使命中懲罰減輕至-2。擊中使非飛行/非植物對手跌倒並無法行動 1+1D3 回合且AC-4' }
                 ]
@@ -1120,7 +1120,7 @@
                             <p class="text-2xl font-bold text-emerald-300">你成功戰勝了不可一世的深淵傳奇主宰！</p>
                             <div class="bg-slate-900/80 border border-amber-500/50 p-6 rounded-2xl max-w-2xl mx-auto space-y-4 shadow-2xl leading-relaxed text-left text-gray-200">
                                 <p>在凡人口耳相傳的故事中，耳語地穴曾是一座無人能還的血色墓穴。但今天，你用鋼鐵般的意志、無與倫比的智慧與力量，親手斬殺了地穴最深處的恐怖禁忌！</p>
-                                <p class="font-bold text-amber-300">即便是傳奇，都在你的武器與奧法面前灰飛煙滅！</p>
+                                <p class="font-bold text-amber-300">即便是傳奇，都在你面前灰飛煙滅！</p>
                                 <p>你的名字將永遠鐫刻在冒險者的大理石神殿最頂峰.人們不會僅稱你為「探險者」或「英雄」——因為從這一刻起，你本身就是迴盪於整個世界中的<span class="text-amber-400 font-extrabold">永恆傳奇</span>！</p>
                             </div>
                             <div class="text-7xl my-8 drop-shadow-md">🏆🌌👑⚔️💎</div>
@@ -1894,8 +1894,9 @@
                          if (enemyConSave >= spellDC) {
                              log("[毒素豁免] 🛡️ [" + enemyConSave + " 成功抵抗毒素 (豁免骰 " + enemyConSave + " >= DC " + spellDC + ")！", 'text-gray-400');
                          } else {
-                             gameState.combatState.enemyPoisonedTurns = 3;
-                             log("[毒素豁免] 🤢 豁免失敗 (豁免骰 " + enemyConSave + " < DC " + spellDC + ")！[" + enemy.name + "] 臉色發青，陷入「中毒」狀態 (持續 3 回合)！期間【命中-1、造成的傷害-1】！", 'text-emerald-400 font-bold animate-pulse');
+                             const poisonDuration = roll(3) + roll(3) + 2; // 2D3 + 2 回合
+                             gameState.combatState.enemyPoisonedTurns = poisonDuration;
+                             log("[毒素豁免] 🤢 豁免失敗 (豁免骰 " + enemyConSave + " < DC " + spellDC + ")！[" + enemy.name + "] 臉色發青，陷入「中毒」狀態 (持續 " + poisonDuration + " 回合)！期間【命中-2、造成的傷害-2】！", 'text-emerald-400 font-bold animate-pulse');
                          }
                      } else {
                          log("[毒鏢] 💨 投擲偏出！(命中檢定 " + hitTotal + " < AC " + targetAC + ")", 'text-gray-400');
@@ -2240,8 +2241,8 @@
                  enemyDmgDebuff += 3;
              }
              if (gameState.combatState.enemyPoisonedTurns > 0) {
-                 enemyHitDebuff += 1;
-                 enemyDmgDebuff += 1;
+                 enemyHitDebuff += 2; // 調整為 -2 命中
+                 enemyDmgDebuff += 2; // 調整為 -2 傷害
              }
 
              if (enemy.name.includes('上古紅龍')) {
