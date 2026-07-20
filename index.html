@@ -778,9 +778,9 @@
                     const mossEnemies = [
                         { name: '巨蜘蛛', hp: 20, ac: 13, dmg: 4, type: 'beast', isFlying: false, legs: 8, hitBonus: 0, desc: '一隻巨大的 <span class="text-rose-400 font-bold">巨蜘蛛</span> 從天花板垂降下來，向你噴吐著毒液！' },
                         { name: '食屍鬼', hp: 25, ac: 12, dmg: 5, type: 'undead', isFlying: false, legs: 2, hitBonus: 1, desc: '一隻散發著惡臭且精於獵殺的 <span class="text-rose-400 font-bold">食屍鬼</span> 從苔蘚堆中爬出，飢渴地盯著你！' },
-                        { name: '狂暴藤蔓', hp: 22, ac: 12, dmg: 4, type: 'plant', isFlying: false, legs: 0, fireWeak: true, hitBonus: 0, desc: '一株表面覆滿倒刺與劇毒汁液的 <span class="text-rose-400 font-bold">狂暴藤蔓 (怕火)</span> 朝你揮舞著粗壯的觸枝！' },
-                        { name: '毒尾蠍', hp: 18, ac: 14, dmg: 5, type: 'beast', isFlying: false, legs: 8, hitBonus: 1, desc: '一隻閃爍著黑綠幽光的 <span class="text-rose-400 font-bold">毒尾蠍 (命中加成)</span> 揮舞著巨螯，高聳著致命毒針！' },
-                        { name: '寒霜蕈怪', hp: 15, ac: 11, dmg: 4, type: 'plant', isFlying: false, legs: 0, fireWeak: true, coldImmune: true, hitBonus: 0, desc: '一團覆滿冰晶的 <span class="text-rose-400 font-bold">寒霜蕈怪 (怕火/冰免)</span> 突然在角落爆裂開來，散發出致命的極寒孢子霧！' }
+                        { name: '狂暴藤蔓', hp: 22, ac: 12, dmg: 4, type: 'plant', isFlying: false, legs: 0, fireWeak: true, hitBonus: 0, desc: '一株表面覆滿倒刺與劇毒汁液的 <span class="text-rose-400 font-bold">狂暴藤蔓 </span> 朝你揮舞著粗壯的觸枝！' },
+                        { name: '毒尾蠍', hp: 18, ac: 14, dmg: 5, type: 'beast', isFlying: false, legs: 8, hitBonus: 1, desc: '一隻閃爍著黑綠幽光的 <span class="text-rose-400 font-bold">毒尾蠍</span> 揮舞著巨螯，高聳著致命毒針！' },
+                        { name: '寒霜蕈怪', hp: 15, ac: 11, dmg: 4, type: 'plant', isFlying: false, legs: 0, fireWeak: true, coldImmune: true, hitBonus: 0, desc: '一團覆滿冰晶的 <span class="text-rose-400 font-bold">寒霜蕈怪</span> 突然在角落爆裂開來，散發出致命的極寒孢子霧！' }
                     ];
                     const randomMossEnemy = mossEnemies[Math.floor(Math.random() * mossEnemies.length)];
                     display.innerHTML = `
@@ -794,11 +794,11 @@
 
                 case 'corridor_blood':
                     const bloodEnemies = [
-                        { name: '獸人暴徒', hp: 30, ac: 11, dmg: 5, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名力大無窮、揮舞著鐵鑄狼牙棒的 <span class="text-rose-400 font-bold">獸人暴徒 (命中加成+2)</span> 發現了你，怒吼著衝了過來！' },
-                        { name: '骷髏戰士', hp: 22, ac: 14, dmg: 6, type: 'undead', isFlying: false, legs: 2, hitBonus: 1, desc: '地上乾涸的血跡中，一具身姿漸進的 <span class="text-rose-400 font-bold">骷髏戰士 (命中加成+1)</span> 舉起生鏽鐵劍，眼窩燃起血光！' },
-                        { name: '地獄雙頭犬', hp: 24, ac: 12, dmg: 5, type: 'fiend', isFlying: false, legs: 4, fireImmune: true, coldWeak: true, hitBonus: 1, desc: '一頭體型龐大、噴吐著硫磺煙霧的 <span class="text-rose-400 font-bold">地獄雙頭犬 (火焰免疫/怕冰/命中加成)</span> 踏著烈焰對你低吼！' },
+                        { name: '獸人暴徒', hp: 30, ac: 11, dmg: 5, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名力大無窮、揮舞著鐵鑄狼牙棒的 <span class="text-rose-400 font-bold">獸人暴徒</span> 發現了你，怒吼著衝了過來！' },
+                        { name: '骷髏戰士', hp: 22, ac: 14, dmg: 6, type: 'undead', isFlying: false, legs: 2, hitBonus: 1, desc: '地上乾涸的血跡中，一具身姿漸進的 <span class="text-rose-400 font-bold">骷髏戰士</span> 舉起生鏽鐵劍，眼窩燃起血光！' },
+                        { name: '地獄雙頭犬', hp: 24, ac: 12, dmg: 5, type: 'fiend', isFlying: false, legs: 4, fireImmune: true, coldWeak: true, hitBonus: 1, desc: '一頭體型龐大、噴吐著硫磺煙霧的 <span class="text-rose-400 font-bold">地獄雙頭犬</span> 踏著烈焰對你低吼！' },
                         { name: '地精祭司', hp: 16, ac: 13, dmg: 4, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 0, desc: '一名身穿碎骨長袍的 <span class="text-rose-400 font-bold">地精祭司</span> 尖叫著，揮舞法杖開始引導邪惡射線！' },
-                        { name: '冬狼', hp: 20, ac: 13, dmg: 5, type: 'beast', isFlying: false, legs: 4, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '一隻裝載硬雪外殼的 <span class="text-rose-400 font-bold">冬狼 (怕火/冰免/命中加成)</span> 帶著徹骨寒氣撲面咬來！' }
+                        { name: '冬狼', hp: 20, ac: 13, dmg: 5, type: 'beast', isFlying: false, legs: 4, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '一隻裝載硬雪外殼的 <span class="text-rose-400 font-bold">冬狼</span> 帶著徹骨寒氣撲面咬來！' }
                     ];
                     const randomBloodEnemy = bloodEnemies[Math.floor(Math.random() * bloodEnemies.length)];
                     display.innerHTML = `
@@ -907,20 +907,20 @@
 
                 case 'corridor_2':
                     const enemiesLayer2 = [
-                        { name: '鯊化魚人', hp: 38, ac: 13, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, coldWeak: true, hitBonus: 1, lightningWeak: true, desc: '一隻雙眼通紅、手持鋸齒三叉戟的 <span class="text-rose-400 font-bold">鯊化魚人 (怕冰/怕電/類人)</span> 從暗處撲出，雙眼散發著海洋深淵的腥味！' },
+                        { name: '鯊化魚人', hp: 38, ac: 13, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, coldWeak: true, hitBonus: 1, lightningWeak: true, desc: '一隻雙眼通紅、手持鋸齒三叉戟的 <span class="text-rose-400 font-bold">鯊化魚人</span> 從暗處撲出，雙眼散發著海洋深淵的腥味！' },
                         { name: '暗影教徒', hp: 35, ac: 13, dmg: 6, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 0, desc: '一名穿著黑袍的 <span class="text-rose-400 font-bold">暗影教徒</span> 正在進行儀式。他轉過頭，雙眼閃爍著瘋狂的光芒：「獻上你的血！」' },
                         { name: '奪心魔', hp: 38, ac: 13, dmg: 7, type: 'aberration', isFlying: false, legs: 2, hitBonus: 1, desc: '一隻散發著強烈精神壓迫感的 <span class="text-rose-400 font-bold">奪心魔</span> 從陰暗中現身，其黏稠的紫色面部觸手緩緩蠕動，雙眼閃爍著飢餓的幽光！' },
-                        { name: '觀察者眼魔', hp: 32, ac: 12, dmg: 6, type: 'aberration', isFlying: true, legs: 0, hitBonus: 1, desc: '一團由無數尖叫眼球與扭曲血肉組成的 <span class="text-rose-400 font-bold">觀察者眼魔 (飛行)</span> 憑空漂浮，空氣中迴盪著刺耳的理智崩解聲！' },
-                        { name: '邪教執法者', hp: 42, ac: 14, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名手持重型釘頭錘、身披鎖子甲的 <span class="text-rose-400 font-bold">邪教執法者 (命中加成+2)</span> 大步走來，低吟著深淵之歌。' },
+                        { name: '觀察者眼魔', hp: 32, ac: 12, dmg: 6, type: 'aberration', isFlying: true, legs: 0, hitBonus: 1, desc: '一團由無數尖叫眼球與扭曲血肉組成的 <span class="text-rose-400 font-bold">觀察者眼魔</span> 憑空漂浮，空氣中迴盪著刺耳的理智崩解聲！' },
+                        { name: '邪教執法者', hp: 42, ac: 14, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名手持重型釘頭錘、身披鎖子甲的 <span class="text-rose-400 font-bold">邪教執法者</span> 大步走來，低吟著深淵之歌。' },
                         { name: '異界畸變體', hp: 40, ac: 11, dmg: 8, type: 'aberration', isFlying: false, legs: 4, hitBonus: 1, desc: '一隻全身長滿不規則骨刺與黏液管道的 <span class="text-rose-400 font-bold">異界畸變體</span> 瘋狂地扭動著身軀，發出令人作嘔的嘶鳴！' },
-                        { name: '鐵甲食人魔', hp: 45, ac: 11, dmg: 7, type: 'giant', isFlying: false, legs: 2, hitBonus: 2, desc: '一隻身披重鐵護甲、力大無窮的 <span class="text-rose-400 font-bold">鐵甲食人魔 (命中加成+2)</span> 正在啃食著骸骨，發出巨吼。' },
-                        { name: '無頭騎士', hp: 40, ac: 14, dmg: 6, type: 'undead', isFlying: false, legs: 2, hitBonus: 2, desc: '一名身姿雄偉的戰將 <span class="text-rose-400 font-bold">無頭騎士 (命中加成+2)</span> 巡邏至此。他發現了你，拔出燃燒的長槍發起衝鋒！' },
+                        { name: '鐵甲食人魔', hp: 45, ac: 11, dmg: 7, type: 'giant', isFlying: false, legs: 2, hitBonus: 2, desc: '一隻身披重鐵護甲、力大無窮的 <span class="text-rose-400 font-bold">鐵甲食人魔</span> 正在啃食著骸骨，發出巨吼。' },
+                        { name: '無頭騎士', hp: 40, ac: 14, dmg: 6, type: 'undead', isFlying: false, legs: 2, hitBonus: 2, desc: '一名身姿雄偉的戰將 <span class="text-rose-400 font-bold">無頭騎士</span> 巡邏至此。他發現了你，拔出燃燒的長槍發起衝鋒！' },
                         { name: '怨毒幽魂', hp: 30, ac: 12, dmg: 8, type: 'undead', isFlying: true, legs: 0, hitBonus: 0, desc: '空氣變得冰冷，一隻半透明的 <span class="text-rose-400 font-bold">怨毒幽魂</span> 從牆壁中穿出，發出刺耳的尖嘯！' },
-                        { name: '雙頭巨人', hp: 48, ac: 10, dmg: 8, type: 'giant', isFlying: false, legs: 2, hitBonus: 2, desc: '一隻擁有雙頭、瘋狂揮舞巨棒的 <span class="text-rose-400 font-bold">雙頭巨人 (命中加成+2)</span> 鎖定了你！' },
+                        { name: '雙頭巨人', hp: 48, ac: 10, dmg: 8, type: 'giant', isFlying: false, legs: 2, hitBonus: 2, desc: '一隻擁有雙頭、瘋狂揮舞巨棒的 <span class="text-rose-400 font-bold">雙頭巨人</span> 鎖定了你！' },
                         { name: '石像鬼', hp: 32, ac: 15, dmg: 6, type: 'monstrosity', isFlying: true, legs: 2, hitBonus: 1, desc: '一尊灰白石雕般的 <span class="text-rose-400 font-bold">石像鬼</span> 突然展開雙翼，雙爪發出刺耳摩擦聲向你俯衝！' },
                         { name: '奇美拉幼獸', hp: 38, ac: 13, dmg: 7, type: 'monstrosity', isFlying: false, legs: 4, hitBonus: 1, desc: '一隻擁有獅身、羊頭與蛇尾的 <span class="text-rose-400 font-bold">奇美拉幼獸</span> 對你與利齒齜牙，敏捷地踏過滿地骸骨。' },
-                        { name: '寒冰元素', hp: 36, ac: 14, dmg: 7, type: 'elemental', isFlying: false, legs: 0, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '大廳的白霜凝聚成巨大的 <span class="text-rose-400 font-bold">寒冰元素 (怕火/冰免)</span>，雙臂揮舞著尖銳冰錐！' },
-                        { name: '腐化巨樹人', hp: 50, ac: 12, dmg: 7, type: 'plant', isFlying: false, legs: 2, fireWeak: true, hitBonus: 1, desc: '一株身體乾枯、帶著蠻力與死靈惡臭的 <span class="text-rose-400 font-bold">腐化巨樹人 (力大無窮/怕火)</span> 帶著滿地枯葉重步踏步而來！' }
+                        { name: '寒冰元素', hp: 36, ac: 14, dmg: 7, type: 'elemental', isFlying: false, legs: 0, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '大廳的白霜凝聚成巨大的 <span class="text-rose-400 font-bold">寒冰元素</span>，雙臂揮舞著尖銳冰錐！' },
+                        { name: '腐化巨樹人', hp: 50, ac: 12, dmg: 7, type: 'plant', isFlying: false, legs: 2, fireWeak: true, hitBonus: 1, desc: '一株身體乾枯、帶著蠻力與死靈惡臭的 <span class="text-rose-400 font-bold">腐化巨樹人</span> 帶著滿地枯葉重步踏步而來！' }
                     ];
                     const randomEnemy2 = enemiesLayer2[Math.floor(Math.random() * enemiesLayer2.length)];
                     
@@ -949,14 +949,14 @@
 
                 case 'pre_rest_combat':
                     const preRestEnemies = [
-                        { name: '鯊化魚人', hp: 38, ac: 13, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, coldWeak: true, hitBonus: 1, lightningWeak: true, desc: '一隻在盤旋階梯中游蕩的 <span class="text-rose-400 font-bold">鯊化魚人 (怕冰/怕電/類人)</span> 朝你發出刺耳的尖嘯並挺起三叉戟！' },
+                        { name: '鯊化魚人', hp: 38, ac: 13, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, coldWeak: true, hitBonus: 1, lightningWeak: true, desc: '一隻在盤旋階梯中游蕩的 <span class="text-rose-400 font-bold">鯊化魚人</span> 朝你發出刺耳的尖嘯並挺起三叉戟！' },
                         { name: '巨蜘蛛', hp: 20, ac: 13, dmg: 4, type: 'beast', isFlying: false, legs: 8, hitBonus: 0, desc: '一隻全身布滿岩石花紋的 <span class="text-rose-400 font-bold">巨蜘蛛</span> 突然自盤旋階梯天花板夾縫倒掛垂降！' },
                         { name: '食屍鬼', hp: 25, ac: 12, dmg: 5, type: 'undead', isFlying: false, legs: 2, hitBonus: 1, desc: '一具在梯段間游蕩覓食的 <span class="text-rose-400 font-bold">食屍鬼</span> 嗅到了生人的氣息，興奮地嚎叫著衝來！' },
-                        { name: '狂暴藤蔓', hp: 22, ac: 12, dmg: 4, type: 'plant', isFlying: false, legs: 0, fireWeak: true, hitBonus: 0, desc: '一株深深鑽入台階裂縫中的 <span class="text-rose-400 font-bold">狂暴藤蔓 (怕火)</span> 揮舞著粗大帶倒鉤的刺鬚，擋住了唯一的去路！' },
-                        { name: '毒尾蠍', hp: 18, ac: 14, dmg: 5, type: 'beast', isFlying: false, legs: 8, hitBonus: 1, desc: '一隻隱藏在盤梯碎石縫中的 <span class="text-rose-400 font-bold">毒尾蠍 (命中加成)</span> 猛地刺出毒針，阻攔你的深入！' },
-                        { name: '冬狼', hp: 20, ac: 13, dmg: 5, type: 'beast', isFlying: false, legs: 4, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '一隻裝載硬雪外殼的 <span class="text-rose-400 font-bold">冬狼 (怕火/冰免/命中加成)</span> 帶著徹骨寒氣撲面咬來！' },
-                        { name: '獸人暴徒', hp: 30, ac: 11, dmg: 5, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名在階梯死角進行埋伏的 <span class="text-rose-400 font-bold">獸人暴徒 (命中加成+2)</span> 大步流星地掄起沉重棒槌向你砸來！' },
-                        { name: '骷髏戰士', hp: 22, ac: 14, dmg: 6, type: 'undead', isFlying: false, legs: 2, hitBonus: 1, desc: '一具在梯段間游蕩的 <span class="text-rose-400 font-bold">骷髏戰士 (命中加成+1)</span> 生硬地扭過骨頭頭顱，提著生鏽鐵劍向你猛斬！' }
+                        { name: '狂暴藤蔓', hp: 22, ac: 12, dmg: 4, type: 'plant', isFlying: false, legs: 0, fireWeak: true, hitBonus: 0, desc: '一株深深鑽入台階裂縫中的 <span class="text-rose-400 font-bold">狂暴藤蔓</span> 揮舞著粗大帶倒鉤的刺鬚，擋住了唯一的去路！' },
+                        { name: '毒尾蠍', hp: 18, ac: 14, dmg: 5, type: 'beast', isFlying: false, legs: 8, hitBonus: 1, desc: '一隻隱藏在盤梯碎石縫中的 <span class="text-rose-400 font-bold">毒尾蠍</span> 猛地刺出毒針，阻攔你的深入！' },
+                        { name: '冬狼', hp: 20, ac: 13, dmg: 5, type: 'beast', isFlying: false, legs: 4, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '一隻裝載硬雪外殼的 <span class="text-rose-400 font-bold">冬狼</span> 帶著徹骨寒氣撲面咬來！' },
+                        { name: '獸人暴徒', hp: 30, ac: 11, dmg: 5, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名在階梯死角進行埋伏的 <span class="text-rose-400 font-bold">獸人暴徒</span> 大步流星地掄起沉重棒槌向你砸來！' },
+                        { name: '骷髏戰士', hp: 22, ac: 14, dmg: 6, type: 'undead', isFlying: false, legs: 2, hitBonus: 1, desc: '一具在梯段間游蕩的 <span class="text-rose-400 font-bold">骷髏戰士</span> 生硬地扭過骨頭頭顱，提著生鏽鐵劍向你猛斬！' }
                     ];
                     const randomPreRestEnemy = preRestEnemies[Math.floor(Math.random() * preRestEnemies.length)];
                     display.innerHTML = `
@@ -1001,18 +1001,18 @@
                 case 'boss_room':
                     const bosses = [
                         { name: '鯊化魚人男爵 (BOSS)', hp: 60, ac: 14, dmg: 8, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, coldWeak: true, lightningWeak: true, desc: '一尊高大無比、滿身覆蓋深藍鱗片且生有利爪的 <span class="text-rose-400 font-bold">鯊化魚人男爵 (BOSS/類人生物/怕冰/怕電/巨型)</span> 狂嘯著踏浪而來，手中的三叉戟泛著殘忍的血光！' },
-                        { name: '深淵死亡騎士 (BOSS)', hp: 55, ac: 15, dmg: 7, type: 'undead', isFlying: false, legs: 2, hitBonus: 2, desc: '一個高大的身影坐在骸骨王座上。那是身經百戰、劍技通神的 <span class="text-rose-400 font-bold">深淵死亡騎士 (BOSS/不死生物)</span>！他拔出燃燒著黑炎的巨劍，緩緩走向你。' },
+                        { name: '深淵死亡騎士 (BOSS)', hp: 55, ac: 15, dmg: 7, type: 'undead', isFlying: false, legs: 2, hitBonus: 2, desc: '一個高大的身影坐在骸骨王座上。那是身經百戰、劍技通神的 <span class="text-rose-400 font-bold">深淵死亡騎士</span>！他拔出燃燒著黑炎的巨劍，緩緩走向你。' },
                         { name: '眼魔暴君 (BOSS)', hp: 50, ac: 14, dmg: 8, type: 'aberration', isFlying: true, legs: 0, hitBonus: 0, desc: '空間突然扭曲，一隻長滿觸手與巨大眼球的龐然大物浮現。那是邪惡的 <span class="text-rose-400 font-bold">眼魔暴君 (BOSS)</span>！它多顆眼球閃爍著致命的魔法光芒，死死盯著你。' },
                         { name: '深紅巨龍 (BOSS)', hp: 65, ac: 15, dmg: 6, type: 'dragon', isFlying: true, legs: 4, fireImmune: true, hitBonus: 2, desc: '地穴開始劇烈震動，岩漿從縫隙中湧出。一頭蠻力無雙、噴吐著烈焰的 <span class="text-rose-400 font-bold">深紅巨龍 (BOSS/火焰免疫/命中加成+2)</span> 從深淵中爬出！' },
-                        { name: '巫妖 (BOSS)', hp: 60, ac: 16, dmg: 9, type: 'undead', isFlying: false, legs: 2, hitBonus: 0, desc: '王座前站立著一名形如枯骨的 <span class="text-rose-400 font-bold">巫妖 (BOSS/不死生物)</span>！他周圍環繞著綠色的死靈魔法，空洞的眼窩鎖定了你。' },
-                        { name: '深淵炎魔 (BOSS)', hp: 70, ac: 14, dmg: 10, type: 'fiend', isFlying: false, legs: 2, fireImmune: true, hitBonus: 1, desc: '岩漿沸騰，一隻力大無窮、手持火焰長鞭的 <span class="text-rose-400 font-bold">深淵炎魔 (BOSS/火焰免疫/命中加成)</span> 破土而出！它狂笑著，準備將你撕碎。' },
-                        { name: '縫合巨怪 (BOSS)', hp: 80, ac: 11, dmg: 8, type: 'undead', isFlying: false, legs: 2, hitBonus: 2, desc: '一隻由無數屍塊拼湊、蠻橫無比的 <span class="text-rose-400 font-bold">縫合巨怪 (BOSS/不死生物/命中加成+2)</span> 擋住了去路！它每走一步，大地都在震顫。' },
-                        { name: '深淵九頭蛇蜥 (BOSS)', hp: 75, ac: 12, dmg: 7, type: 'monstrosity', isFlying: false, legs: 4, hitBonus: 2, desc: '一隻盤踞在大廳、有著九個嘶吼頭顱且力量驚人的 <span class="text-rose-400 font-bold">深淵九頭蛇蜥 (BOSS/命中加成+2)</span> 探出頭來，九對豎瞳鎖定了你！' },
-                        { name: '奪心魔長老 (BOSS)', hp: 58, ac: 14, dmg: 9, type: 'aberration', isFlying: true, legs: 2, hitBonus: 0, desc: '空間中響起尖銳的心靈低語，一隻長著紫色觸鬚、身披華麗長袍的 <span class="text-rose-400 font-bold">奪心魔長老 (BOSS/飛行)</span> 悄無聲息地在半空滑動，其腦袋閃動著幽紫心靈光暈！' },
-                        { name: '虛空吞噬獸 (BOSS)', hp: 72, ac: 13, dmg: 8, type: 'aberration', isFlying: false, legs: 6, hitBonus: 1, desc: '一團從虛空裂隙中爬出、力大無比且長滿利齒與六條節肢的 <span class="text-rose-400 font-bold">虛空吞噬獸 (BOSS/命中加成)</span> 發出深沉的咆哮！' },
+                        { name: '巫妖 (BOSS)', hp: 60, ac: 16, dmg: 9, type: 'undead', isFlying: false, legs: 2, hitBonus: 0, desc: '王座前站立著一名形如枯骨的 <span class="text-rose-400 font-bold">巫妖 (BOSS)</span>！他周圍環繞著綠色的死靈魔法，空洞的眼窩鎖定了你。' },
+                        { name: '深淵炎魔 (BOSS)', hp: 70, ac: 14, dmg: 10, type: 'fiend', isFlying: false, legs: 2, fireImmune: true, hitBonus: 1, desc: '岩漿沸騰，一隻力大無窮、手持火焰長鞭的 <span class="text-rose-400 font-bold">深淵炎魔</span> 破土而出！它狂笑著，準備將你撕碎。' },
+                        { name: '縫合巨怪 (BOSS)', hp: 80, ac: 11, dmg: 8, type: 'undead', isFlying: false, legs: 2, hitBonus: 2, desc: '一隻由無數屍塊拼湊、蠻橫無比的 <span class="text-rose-400 font-bold">縫合巨怪 (BOSS)</span> 擋住了去路！它每走一步，大地都在震顫。' },
+                        { name: '深淵九頭蛇蜥 (BOSS)', hp: 75, ac: 12, dmg: 7, type: 'monstrosity', isFlying: false, legs: 4, hitBonus: 2, desc: '一隻盤踞在大廳、有著九個嘶吼頭顱且力量驚人的 <span class="text-rose-400 font-bold">深淵九頭蛇蜥 (BOSS)</span> 探出頭來，九對豎瞳鎖定了你！' },
+                        { name: '奪心魔長老 (BOSS)', hp: 58, ac: 14, dmg: 9, type: 'aberration', isFlying: true, legs: 2, hitBonus: 0, desc: '空間中響起尖銳的心靈低語，一隻長著紫色觸鬚、身披華麗長袍的 <span class="text-rose-400 font-bold">奪心魔長老 (BOSS)</span> 悄無聲息地在半空滑動，其腦袋閃動著幽紫心靈光暈！' },
+                        { name: '虛空吞噬獸 (BOSS)', hp: 72, ac: 13, dmg: 8, type: 'aberration', isFlying: false, legs: 6, hitBonus: 1, desc: '一團從虛空裂隙中爬出、力大無比且長滿利齒與六條節肢的 <span class="text-rose-400 font-bold">虛空吞噬獸 (BOSS)</span> 發出深沉的咆哮！' },
                         { name: '霜巨人領主 (BOSS)', hp: 75, ac: 13, dmg: 9, type: 'giant', isFlying: false, legs: 2, fireWeak: true, coldImmune: true, hitBonus: 2, desc: '徹骨寒風中，一個披著萬年寒霜、揮舞寒冰巨斧的 <span class="text-rose-500 font-bold">霜巨人領主 (BOSS)</span> 跨步走來！' },
                         { name: '純白雪龍 (BOSS)', hp: 60, ac: 18, dmg: 8, type: 'dragon', isFlying: true, legs: 2, fireWeak: true, coldImmune: true, hitBonus: 1, desc: '天穹灑下碎冰，一隻身披雪白色晶瑩鱗片、振翼擊風的巨大 <span class="text-rose-400 font-bold">純白雪龍 (BOSS)</span> 展開雙翼，刮起極地狂風暴雪！' },
-                        { name: '墮落聖騎士 (BOSS)', hp: 60, ac: 16, dmg: 8, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一尊高聳的鋼鐵身影欄在出口前。那是曾守護王國卻沉淪至深淵的 <span class="text-rose-400 font-bold">墮落聖騎士 (BOSS/類人生物/命中加成+2)</span>！他揮舞著污染的神聖復仇之劍，眼中閃爍著無情的殺意。' }
+                        { name: '墮落聖騎士 (BOSS)', hp: 60, ac: 16, dmg: 8, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一尊高聳的鋼鐵身影欄在出口前。那是曾守護王國卻沉淪至深淵的 <span class="text-rose-400 font-bold">墮落聖騎士 (BOSS)</span>！他揮舞著污染的神聖復仇之劍，眼中閃爍著無情的殺意。' }
                     ];
                     const randomBoss = bosses[Math.floor(Math.random() * bosses.length)];
 
@@ -1044,11 +1044,11 @@
 
                 case 'legendary_corridor':
                     const legCorridorEnemies = [
-                        { name: '鯊化魚人', hp: 38, ac: 13, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, coldWeak: true, hitBonus: 1, lightningWeak: true, desc: '一隻在深邃迴廊埋伏的 <span class="text-rose-400 font-bold">鯊化魚人 (怕冰/怕電/類人)</span> 向你逼近，眼中流露嗜血之意！' },
+                        { name: '鯊化魚人', hp: 38, ac: 13, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, coldWeak: true, hitBonus: 1, lightningWeak: true, desc: '一隻在深邃迴廊埋伏的 <span class="text-rose-400 font-bold">鯊化魚人</span> 向你逼近，眼中流露嗜血之意！' },
                         { name: '暗影教徒', hp: 35, ac: 13, dmg: 6, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 0, desc: '一名穿著黑袍的 <span class="text-rose-400 font-bold">暗影教徒</span> 攔住去路！他狂熱地嚎叫：「沒有人能驚擾沉睡的傳奇神話！」' },
                         { name: '奪心魔', hp: 38, ac: 13, dmg: 7, type: 'aberration', isFlying: false, legs: 2, hitBonus: 1, desc: '一隻散發著強烈精神壓迫感的 <span class="text-rose-400 font-bold">奪心魔</span> 從暗處現身，試圖在傳奇禁地入口奴役你的心靈！' },
-                        { name: '觀察者眼魔', hp: 32, ac: 12, dmg: 6, type: 'aberration', isFlying: true, legs: 0, hitBonus: 1, desc: '一團由無數尖叫眼球與扭曲血肉組成的 <span class="text-rose-400 font-bold">觀察者眼魔 (飛行)</span> 在前方游蕩，用多向魔眼鎖定了你！' },
-                        { name: '邪教執法者', hp: 42, ac: 14, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名手持重型釘頭錘、身披鎖子甲的 <span class="text-rose-400 font-bold">邪教執法者 (命中加成+2)</span> 大步走來，擋在了傳奇通道的前哨。' }
+                        { name: '觀察者眼魔', hp: 32, ac: 12, dmg: 6, type: 'aberration', isFlying: true, legs: 0, hitBonus: 1, desc: '一團由無數尖叫眼球與扭曲血肉組成的 <span class="text-rose-400 font-bold">觀察者眼魔</span> 在前方游蕩，用多向魔眼鎖定了你！' },
+                        { name: '邪教執法者', hp: 42, ac: 14, dmg: 7, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 2, desc: '一名手持重型釘頭錘、身披鎖子甲的 <span class="text-rose-400 font-bold">邪教執法者</span> 大步走來，擋在了傳奇通道的前哨。' }
                     ];
                     const randomLegEnemy = legCorridorEnemies[Math.floor(Math.random() * legCorridorEnemies.length)];
                     display.innerHTML = `
@@ -1091,14 +1091,14 @@
 
                 case 'legendary_boss_room':
                     const legendaryBosses = [
-                        { name: '鯊化魚人親王 (LEGENDARY BOSS)', hp: 85, ac: 15, dmg: 10, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 6, coldWeak: true, lightningWeak: true, isSahuaginPrince: true, desc: '一位身披深海珊瑚魔甲、手持雷湧三叉戟的 <span class="text-rose-500 font-black">鯊化魚人親王 (傳奇首領/類人/怕冰/怕電/巨型)</span> 破浪而出！他週身環繞著狂暴的水元素，雙眼滿是狂暴的殺意！' },
+                        { name: '鯊化魚人親王 (LEGENDARY BOSS)', hp: 85, ac: 15, dmg: 10, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 6, coldWeak: true, lightningWeak: true, isSahuaginPrince: true, desc: '一位身披深海珊瑚魔甲、手持雷湧三叉戟的 <span class="text-rose-500 font-black">鯊化魚人親王 (傳奇首領)</span> 破浪而出！他週身環繞著狂暴的水元素，雙眼滿是狂暴的殺意！' },
                         { name: '半神巫妖 (LEGENDARY BOSS)', hp: 65, ac: 18, dmg: 9, type: 'undead', isFlying: true, legs: 2, hitBonus: 9, isDemilich: true, desc: '虛空中懸浮著一顆由無數靈魂寶石裝飾的金色頭骨，雙眼噴吐著冰冷的死靈焰火。那是超越生死的存在——<span class="text-rose-500 font-black">半神巫妖 (傳奇首領)</span>！他發出空洞刺骨的冷笑。' },
-                        { name: '主腦 (LEGENDARY BOSS)', hp: 100, ac: 1, dmg: 9, type: 'aberration', isFlying: false, legs: 0, hitBonus: 5, isElderBrain: true, lightningWeak: true, desc: '大廳中央的黏液池中，一個巨大的、充滿褶皺的粉紅色大腦正在劇烈脈動，無數半透明的心靈觸鬚在虛空中瘋狂揮舞。那是心靈異怪的至高主宰——<span class="text-rose-500 font-black">主腦 (傳奇首領/怕電)</span>！' },
+                        { name: '主腦 (LEGENDARY BOSS)', hp: 100, ac: 1, dmg: 9, type: 'aberration', isFlying: false, legs: 0, hitBonus: 5, isElderBrain: true, lightningWeak: true, desc: '大廳中央的黏液池中，一個巨大的、充滿褶皺的粉紅色大腦正在劇烈脈動，無數半透明的心靈觸鬚在虛空中瘋狂揮舞。那是心靈異怪的至高主宰——<span class="text-rose-500 font-black">主腦 (傳奇首領)</span>！' },
                         { name: '精靈傳奇大法師 (LEGENDARY BOSS)', hp: 75, ac: 14, dmg: 12, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 5, isElvenArchmage: true, desc: '一名肌肉壯實，臉皮彷彿被撕下來精靈男子，手中法杖散發著毀天滅地的祕法亂流，傲慢的眼神將你視作微不足道的螻蟻。那是追求真理至瘋魔的——<span class="text-rose-500 font-black">精靈傳奇大法師 (傳奇首領)</span>！' },
-                        { name: '上古紅龍 (LEGENDARY BOSS)', hp: 90, ac: 18, dmg: 8, dmgBonus: 5, type: 'dragon', isFlying: true, legs: 4, fireImmune: true, coldWeak: true, hitBonus: 9, desc: '大地突然劇烈撕裂，滾燙 of 熔岩如噴泉般湧出！一頭雙翼遮天蔽日、渾身散發古老毀滅威壓的 <span class="text-rose-500 font-black">上古紅龍 (傳奇首領/火焰免疫/怕冰/命中加成+9)</span> 緩緩降臨，熔岩在其鱗甲間流淌！' },
-                        { name: '巨型原初梟熊 (LEGENDARY BOSS)', hp: 85, ac: 16, dmg: 8, dmgBonus: 3, type: 'beast', isFlying: true, legs: 4, hitBonus: 6, isPrimalOwlbear: true, desc: '一頭體型龐大、覆蓋著鋼鐵般羽毛的 <span class="text-rose-500 font-black">巨型原初梟熊 (傳奇首領/野獸/飛行/巨型)</span> 猛然張開佈滿利齒的巨喙，狂風隨著其翅膀羽翼的拍打呼嘯而至！' },
-                        { name: '傳奇六臂蛇魔 (LEGENDARY BOSS)', hp: 80, ac: 14, dmg: 3, dmgBonus: 2, type: 'fiend', isFlying: false, legs: 1, hitBonus: 6, isMarilith: true, desc: '一位有著致命女性上半身與龐大蟒蛇下半身的 <span class="text-rose-500 font-black">傳奇六臂蛇魔 (傳奇首領/惡魔)</span> 揮舞著六柄寒光閃閃的附魔大刀，帶著殘忍的微笑盯著你！' },
-                        { name: '鎧甲男子 (LEGENDARY BOSS)', hp: 80, ac: 20, dmg: 12, dmgBonus: 2, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 7, isArmorMan: true, desc: '一名身披沉重漆黑魔甲、戴著崢嶸角盔的男子緩步踏出，他手握一柄滿是符文乾涸血漬的狂暴巨劍，雙眼燃燒著邪神之火。那是擁有不朽邪神血脈的——<span class="text-rose-500 font-black">鎧甲男子 (傳奇首領/人形生物)</span>！' }
+                        { name: '上古紅龍 (LEGENDARY BOSS)', hp: 90, ac: 18, dmg: 8, dmgBonus: 5, type: 'dragon', isFlying: true, legs: 4, fireImmune: true, coldWeak: true, hitBonus: 9, desc: '大地突然劇烈撕裂，滾燙熔岩如噴泉般湧出！一頭雙翼遮天蔽日、渾身散發古老毀滅威壓的 <span class="text-rose-500 font-black">上古紅龍 (傳奇首領)</span> 緩緩降臨，熔岩在其鱗甲間流淌！' },
+                        { name: '巨型原初梟熊 (LEGENDARY BOSS)', hp: 85, ac: 16, dmg: 8, dmgBonus: 3, type: 'beast', isFlying: true, legs: 4, hitBonus: 6, isPrimalOwlbear: true, desc: '一頭體型龐大、覆蓋著鋼鐵般羽毛的 <span class="text-rose-500 font-black">巨型原初梟熊 (傳奇首領)</span> 猛然張開佈滿利齒的巨喙，狂風隨著其翅膀羽翼的拍打呼嘯而至！' },
+                        { name: '傳奇六臂蛇魔 (LEGENDARY BOSS)', hp: 80, ac: 14, dmg: 3, dmgBonus: 2, type: 'fiend', isFlying: false, legs: 1, hitBonus: 6, isMarilith: true, desc: '一位有著致命女性上半身與龐大蟒蛇下半身的 <span class="text-rose-500 font-black">傳奇六臂蛇魔 (傳奇首領)</span> 揮舞著六柄寒光閃閃的附魔大刀，帶著殘忍的微笑盯著你！' },
+                        { name: '鎧甲男子 (LEGENDARY BOSS)', hp: 80, ac: 20, dmg: 12, dmgBonus: 2, type: 'humanoid', isFlying: false, legs: 2, hitBonus: 7, isArmorMan: true, desc: '一名身披沉重漆黑魔甲、戴著崢嶸角盔的男子緩步踏出，他手握一柄滿是符文乾涸血漬的狂暴巨劍，雙眼燃燒著邪神之火。那是擁有不朽邪神血脈的——<span class="text-rose-500 font-black">鎧甲男子 (傳奇首領)</span>！' }
                     ];
                     const randomLegBoss = legendaryBosses[Math.floor(Math.random() * legendaryBosses.length)];
                     
