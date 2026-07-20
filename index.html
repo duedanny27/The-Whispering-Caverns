@@ -422,7 +422,7 @@
             document.getElementById('class-val').textContent = gameState.player.name;
             document.getElementById('potion-val').textContent = gameState.potions;
 
-            let gearText = gearNames.length > 0 ? `裝備: ${gearNames.join(' | ')}` : "裝備: 破舊衣物";
+            let gearText = gearNames.length > 0 ? `裝備: ${gearNames.join(' | ')}` : "裝備: 基本裝備";
             if (gameState.player.name === '戰士' && gameState.gear.weapon) {
                 gearText += " | ⚔️ 武器訓練：命中與傷害 +2！";
             }
@@ -2179,10 +2179,43 @@
                   }
                   gameState.combatState.bossTurnCounter++;
                   if (gameState.combatState.bossTurnCounter % 5 === 0) {
-                      log("🐻 巨型原初梟熊猛然展翅，揮動雙翼引導強烈狂風，對你發動【原初狂風掃倒】！(無視常規 AC 防禦)", 'text-amber-400 font-extrabold animate-pulse');
-                      const duration = roll(3); // 1D3 回合
-                      gameState.combatState.playerProneTurns = duration; 
-                      log("🧼 擊中！狂暴強風撕裂大地將你掃倒在地！接下來 " + duration + " 回合內你將【無法行動】，且 AC 防禦力下降 4 點！", 'text-rose-500 font-bold animate-bounce');
+                      playSynthSound('spell');
+                      
+                      // 依據職業特性設定力量(STR)或敏捷(DEX)豁免加成
+                      let saveBonus = 0;
+                      let saveType = "力量";
+                      const pClass = gameState.player.name;
+
+                      if (pClass === '戰士' || pClass === '野蠻人') {
+                          saveBonus = 4; // 力量優勢，強行頂住狂風
+                          saveType = "力量";
+                      } else if (pClass === '盜賊' || pClass === '武僧') {
+                          saveBonus = 4; // 敏捷優勢，靈巧閃避強風
+                          saveType = "敏捷";
+                      } else if (pClass === '德魯伊' || pClass === '牧師') {
+                          saveBonus = 2; // 中等體格與反應
+                          saveType = "體格反應";
+                      } else {
+                          saveBonus = 0; // 奧術雙脆反應與力量較為薄弱
+                          saveType = "體格反應";
+                      }
+
+                      const saveRoll = roll(20);
+                      const saveTotal = saveRoll + saveBonus;
+                      const saveDC = 14; // 設定中高難度的豁免檻 (DC 14)
+
+                      log(`🐻 [${enemy.name}] 猛然展翅，雙翼掀起一陣摧枯拉朽的狂暴氣流！發動【原初狂風掃倒】！`, 'text-amber-400 font-extrabold animate-pulse');
+                      log(`🧼 你急忙試圖穩住身軀，進行了一次 【${saveType} 豁免檢定】 (難度目標 DC: ${saveDC})...`, 'text-indigo-300');
+
+                      if (saveTotal >= saveDC) {
+                          // 豁免成功：不受控制效果影響
+                          log(`✨ 豁免成功！(擲骰檢定: ${saveRoll} + 職業修正 ${saveBonus} = ${saveTotal} >= DC ${saveDC})。你咬緊牙關在撕裂的狂風中站穩了腳步，並未跌倒！`, 'text-emerald-400 font-bold');
+                      } else {
+                          // 豁免失敗：套用隨機回合的跌倒控制
+                          const duration = roll(3); // 1D3 回合
+                          gameState.combatState.playerProneTurns = duration; 
+                          log(`❌ 豁免失敗！(擲骰檢定: ${saveRoll} + 職業修正 ${saveBonus} = ${saveTotal} < DC ${saveDC})。毀滅性風壓狠狠將你拍倒在地，陷入【跌倒】狀態 ${duration} 回合！【無法行動，且 AC 防禦力下降 4 點】！`, 'text-rose-500 font-bold animate-bounce');
+                      }
                       
                       if(gameState.combatState.enemyProneTurns > 0) gameState.combatState.enemyProneTurns--;
                       if(gameState.combatState.enemyStunnedTurns > 0) gameState.combatState.enemyStunnedTurns--;
