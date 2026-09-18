@@ -1621,7 +1621,7 @@
             }
             else if (ability.id === 'fireball') {
                 if (enemy.fireImmune) {
-                    log("[火球術] 对 [" + enemy.name + "] 释放！但是对手具有火系免疫特性，造成 0 點傷害！", 'text-rose-400 font-bold');
+                    log("[火球術] 对 [" + enemy.name + "] 釋放！但是目標具有火焰免疫特性，未造成傷害！", 'text-rose-400 font-bold');
                 } else {
                     const isPlantOrWeak = enemy.type === 'plant' || enemy.fireWeak;
                     let dmg = (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus);
@@ -1636,7 +1636,7 @@
                 }
             } else if (ability.id === 'fireball_sorcerer') {
                 if (enemy.fireImmune) {
-                    log("[強效火球術] 对 [" + enemy.name + "] 释放！但是对手具有火系免疫特性，造成 0 點傷害！", 'text-rose-400 font-bold');
+                    log("[強效火球術] 对 [" + enemy.name + "] 釋放！但是目標具有火焰免疫特性，未造成傷害！", 'text-rose-400 font-bold');
                 } else {
                     const isPlantOrWeak = enemy.type === 'plant' || enemy.fireWeak;
                     let dmg = (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus) + (roll(6) + player.spellBonus);
